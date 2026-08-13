@@ -52,6 +52,20 @@
     .assistant .bubble{background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:6px}
     .user .bubble{background:#6d28d9;border-bottom-right-radius:6px}
     .agentname{font-size:11px;color:#c4b5fd;margin:0 0 5px 3px}
+    .consulted{
+  margin-top:8px;
+  padding:8px 10px;
+  border-radius:12px;
+  background:#101018;
+  border:1px solid var(--line);
+  font-size:12px;
+  color:var(--muted);
+  line-height:1.5;
+}
+
+.consulted strong{
+  color:#ddd6fe;
+}
     .handoff{
       margin:8px auto;text-align:center;color:var(--muted);font-size:12px
     }
@@ -126,27 +140,55 @@
     document.querySelectorAll('.chip').forEach(c=>{
       c.classList.toggle('active', c.dataset.agent === name);
     });
-    status.textContent = 'aktiv: ' + name;
+    status.textContent = 'aktiv: ' + 
+      function addMessage(role, text, agent='', consulted=[]){
+  if(hint) hint.remove();
+
+  const row = document.createElement('div');
+  row.className = 'msg ' + role;
+
+  const wrap = document.createElement('div');
+
+  if(role === 'assistant' && agent){
+    const n = document.createElement('div');
+    n.className = 'agentname';
+    n.textContent = agent;
+    wrap.appendChild(n);
   }
 
-  function addMessage(role, text, agent=''){
-    if(hint) hint.remove();
-    const row = document.createElement('div');
-    row.className = 'msg ' + role;
-    const wrap = document.createElement('div');
-    if(role === 'assistant' && agent){
-      const n = document.createElement('div');
-      n.className = 'agentname';
-      n.textContent = agent;
-      wrap.appendChild(n);
-    }
-    const b = document.createElement('div');
-    b.className = 'bubble';
-    b.textContent = text;
-    wrap.appendChild(b);
-    row.appendChild(wrap);
-    messages.appendChild(row);
-    window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'});
+  const b = document.createElement('div');
+  b.className = 'bubble';
+  b.textContent = text;
+  wrap.appendChild(b);
+
+  if(role === 'assistant' && consulted && consulted.length){
+    const c = document.createElement('div');
+    c.className = 'consulted';
+
+    const icons = {
+      'Mirjana': '💰',
+      'Milorad': '⚖️',
+      'Doktor Mladen': '🩺',
+      'Scout': '🔎',
+      'James Bond': '🌍',
+      'Pinky': '⚡'
+    };
+
+    c.innerHTML =
+      '<strong>Konsultiert:</strong> ' +
+      consulted.map(name => (icons[name] || '•') + ' ' + name).join(' · ');
+
+    wrap.appendChild(c);
+  }
+
+  row.appendChild(wrap);
+  messages.appendChild(row);
+
+  window.scrollTo({
+    top: document.body.scrollHeight,
+    behavior: 'smooth'
+  });
+}
   }
 
   function addHandoff(from, to){
@@ -182,7 +224,7 @@
       }
       lastAgent = data.agent || 'Miloš';
       activeAgent(lastAgent);
-      addMessage('assistant', data.message, lastAgent);
+  addMessage('assistant', data.message, lastAgent, data.consulted_agents || []);
     }catch(e){
       addMessage('assistant', 'Fehler: ' + e.message, 'System');
       status.textContent='Fehler';
