@@ -25,7 +25,9 @@ class ChatRequest(BaseModel):
 @app.get("/health")
 async def health():
     return {"ok": True}
-
+@app.get("/")
+async def root():
+    return {"message": "Miloš Team Backend läuft"}
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
     if not os.getenv("OPENAI_API_KEY"):
