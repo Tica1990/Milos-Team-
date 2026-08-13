@@ -27,7 +27,7 @@ async def health():
     return {"ok": True}
 @app.get("/")
 async def root():
-    return {"message": "Miloš Team Backend läuft"}
+    return FileResponse(APP_DIR / "index.html")
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
     if not os.getenv("OPENAI_API_KEY"):
