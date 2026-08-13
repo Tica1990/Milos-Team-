@@ -44,7 +44,7 @@ async def chat(req: ChatRequest):
         db_path=str(DB_PATH),
     )
 
-    result = await Runner.run(
+    
             consulted_agents = []
 
     tool_to_agent = {
