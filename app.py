@@ -45,7 +45,7 @@ async def chat(req: ChatRequest):
     )
 
     
-            consulted_agents = []
+         consulted_agents = []
 
     tool_to_agent = {
         "frage_mirjana": "Mirjana",
