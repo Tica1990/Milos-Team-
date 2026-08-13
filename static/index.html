@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0b0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>Miloš Team</title>
+  <style>
+    :root{
+      --bg:#0b0b0f; --panel:#15151c; --panel2:#1c1c25; --text:#f5f5f7;
+      --muted:#a1a1aa; --accent:#8b5cf6; --line:#2a2a35; --ok:#22c55e;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;background:var(--bg);color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",Inter,Arial,sans-serif;
+      min-height:100dvh;
+    }
+    .app{max-width:820px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+    header{
+      position:sticky;top:0;z-index:10;background:rgba(11,11,15,.9);
+      backdrop-filter:blur(18px);border-bottom:1px solid var(--line);
+      padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;
+    }
+    .top{display:flex;align-items:center;gap:12px}
+    .orb{
+      width:42px;height:42px;border-radius:14px;
+      background:linear-gradient(135deg,#7c3aed,#2563eb);
+      display:grid;place-items:center;font-weight:800;font-size:19px;
+      box-shadow:0 8px 30px rgba(124,58,237,.25)
+    }
+    h1{font-size:18px;margin:0}
+    .sub{font-size:12px;color:var(--muted);margin-top:2px}
+    .agentbar{
+      margin-top:10px;display:flex;gap:8px;overflow:auto;padding-bottom:2px;
+      scrollbar-width:none
+    }
+    .chip{
+      flex:0 0 auto;border:1px solid var(--line);background:var(--panel);
+      color:var(--muted);padding:7px 10px;border-radius:999px;font-size:12px
+    }
+    .chip.active{color:white;border-color:#6d28d9;background:#24133f}
+    #messages{flex:1;padding:18px 14px 120px}
+    .msg{display:flex;margin:10px 0}
+    .msg.user{justify-content:flex-end}
+    .bubble{
+      max-width:86%;padding:12px 14px;border-radius:18px;line-height:1.45;
+      white-space:pre-wrap;font-size:15px
+    }
+    .assistant .bubble{background:var(--panel);border:1px solid var(--line);border-bottom-left-radius:6px}
+    .user .bubble{background:#6d28d9;border-bottom-right-radius:6px}
+    .agentname{font-size:11px;color:#c4b5fd;margin:0 0 5px 3px}
+    .handoff{
+      margin:8px auto;text-align:center;color:var(--muted);font-size:12px
+    }
+    .composer{
+      position:fixed;left:0;right:0;bottom:0;background:linear-gradient(transparent,var(--bg) 26%);
+      padding:28px 12px calc(env(safe-area-inset-bottom) + 10px)
+    }
+    .composer-inner{
+      max-width:820px;margin:auto;display:flex;gap:8px;align-items:flex-end;
+      background:var(--panel2);border:1px solid var(--line);border-radius:22px;padding:8px
+    }
+    textarea{
+      flex:1;resize:none;max-height:140px;min-height:42px;background:transparent;
+      border:none;outline:none;color:white;font:inherit;padding:10px
+    }
+    button{
+      width:44px;height:44px;border-radius:16px;border:none;background:var(--accent);
+      color:white;font-size:20px;font-weight:700
+    }
+    button:disabled{opacity:.45}
+    .hint{padding:34px 18px;text-align:center;color:var(--muted)}
+    .hint strong{color:white}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="top">
+      <div class="orb">M</div>
+      <div>
+        <h1>Miloš Team</h1>
+        <div class="sub" id="status">bereit</div>
+      </div>
+    </div>
+    <div class="agentbar" id="agentbar">
+      <div class="chip active" data-agent="Miloš">🧠 Miloš</div>
+      <div class="chip" data-agent="Mirjana">💰 Mirjana</div>
+      <div class="chip" data-agent="Milorad">⚖️ Milorad</div>
+      <div class="chip" data-agent="Doktor Mladen">🩺 Doktor Mladen</div>
+      <div class="chip" data-agent="Scout">🔎 Scout</div>
+      <div class="chip" data-agent="James Bond">🌍 James Bond</div>
+      <div class="chip" data-agent="Pinky">⚡ Pinky</div>
+    </div>
+  </header>
+
+  <main id="messages">
+    <div class="hint" id="hint">
+      <strong>Sprich zuerst mit Miloš.</strong><br><br>
+      Zum Beispiel:<br>
+      „Ich habe eine Geschäftsidee. Hol die richtigen Leute dazu.“
+    </div>
+  </main>
+</div>
+
+<div class="composer">
+  <div class="composer-inner">
+    <textarea id="input" rows="1" placeholder="Nachricht an Miloš …"></textarea>
+    <button id="send">↑</button>
+  </div>
+</div>
+
+<script>
+  const input = document.getElementById('input');
+  const send = document.getElementById('send');
+  const messages = document.getElementById('messages');
+  const hint = document.getElementById('hint');
+  const status = document.getElementById('status');
+  let sessionId = localStorage.getItem('milos_session_id') || null;
+  let lastAgent = 'Miloš';
+
+  function activeAgent(name){
+    document.querySelectorAll('.chip').forEach(c=>{
+      c.classList.toggle('active', c.dataset.agent === name);
+    });
+    status.textContent = 'aktiv: ' + name;
+  }
+
+  function addMessage(role, text, agent=''){
+    if(hint) hint.remove();
+    const row = document.createElement('div');
+    row.className = 'msg ' + role;
+    const wrap = document.createElement('div');
+    if(role === 'assistant' && agent){
+      const n = document.createElement('div');
+      n.className = 'agentname';
+      n.textContent = agent;
+      wrap.appendChild(n);
+    }
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    b.textContent = text;
+    wrap.appendChild(b);
+    row.appendChild(wrap);
+    messages.appendChild(row);
+    window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'});
+  }
+
+  function addHandoff(from, to){
+    const d = document.createElement('div');
+    d.className='handoff';
+    d.textContent = '↪ ' + from + ' → ' + to;
+    messages.appendChild(d);
+  }
+
+  async function submit(){
+    const text = input.value.trim();
+    if(!text) return;
+    addMessage('user', text);
+    input.value='';
+    input.style.height='auto';
+    send.disabled=true;
+    status.textContent='denkt …';
+
+    try{
+      const r = await fetch('/api/chat',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({message:text, session_id:sessionId})
+      });
+      const data = await r.json();
+      if(!r.ok) throw new Error(data.detail || 'Serverfehler');
+
+      sessionId = data.session_id;
+      localStorage.setItem('milos_session_id', sessionId);
+
+      if(data.agent && data.agent !== lastAgent){
+        addHandoff(lastAgent, data.agent);
+      }
+      lastAgent = data.agent || 'Miloš';
+      activeAgent(lastAgent);
+      addMessage('assistant', data.message, lastAgent);
+    }catch(e){
+      addMessage('assistant', 'Fehler: ' + e.message, 'System');
+      status.textContent='Fehler';
+    }finally{
+      send.disabled=false;
+      input.focus();
+    }
+  }
+
+  send.addEventListener('click', submit);
+  input.addEventListener('keydown', e=>{
+    if(e.key==='Enter' && !e.shiftKey){
+      e.preventDefault(); submit();
+    }
+  });
+  input.addEventListener('input', ()=>{
+    input.style.height='auto';
+    input.style.height=Math.min(input.scrollHeight,140)+'px';
+  });
+
+  activeAgent('Miloš');
+</script>
+</body>
+</html>
