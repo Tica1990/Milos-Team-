@@ -43,7 +43,11 @@ async def chat(req: ChatRequest):
         session_id=session_id,
         db_path=str(DB_PATH),
     )
-
+    result = await Runner.run(
+    milos,
+    message,
+    session=session,
+)
     
     consulted_agents = []
 
