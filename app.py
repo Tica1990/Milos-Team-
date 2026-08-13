@@ -45,19 +45,29 @@ async def chat(req: ChatRequest):
     )
 
     result = await Runner.run(
-        milos,
-        message,
-        session=session,
-    )
+            consulted_agents = []
+
+    tool_to_agent = {
+        "frage_mirjana": "Mirjana",
+        "frage_milorad": "Milorad",
+        "frage_doktor_mladen": "Doktor Mladen",
+        "frage_scout": "Scout",
+        "frage_james_bond": "James Bond",
+        "frage_pinky": "Pinky",
+    }
+
+    for item in result.new_items:
+        raw_item = getattr(item, "raw_item", None)
+        tool_name = getattr(raw_item, "name", None)
+
+        if tool_name in tool_to_agent:
+            agent_name = tool_to_agent[tool_name]
+            if agent_name not in consulted_agents:
+                consulted_agents.append(agent_name)
 
     return {
         "session_id": session_id,
         "agent": result.last_agent.name,
         "message": result.final_output,
+        "consulted_agents": consulted_agents,
     }
-
-app.mount("/static", StaticFiles(directory=APP_DIR / "static"), name="static")
-
-@app.get("/")
-async def index():
-    return FileResponse(APP_DIR / "static" / "index.html")
