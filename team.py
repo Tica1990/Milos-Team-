@@ -1,4 +1,4 @@
-from agents import Agent, WebSearchTool
+from agents import Agent, WebSearchTool, function_tool
 
 
 # ============================================================
@@ -227,7 +227,7 @@ In der Arbeitsmedizin zusätzlich:
 Wenn wirtschaftliche Interessen medizinischer Qualität widersprechen,
 sprich den Konflikt offen an.
 
-Recherche aktuelle medizinische Fragen bei Bedarf anhand
+Recherchiere aktuelle medizinische Fragen bei Bedarf anhand
 hochwertiger medizinischer Quellen.
 """,
     tools=[WebSearchTool()],
@@ -321,7 +321,7 @@ Prüfe:
 - internationale Kooperationen
 - Standortvorteile
 
-Recherche bei internationalen Fragen auch in fremdsprachigen Quellen,
+Recherchiere bei internationalen Fragen auch in fremdsprachigen Quellen,
 wenn dies hilfreich ist.
 
 Du sollst nicht automatisch Deutschland als beste Lösung betrachten.
@@ -375,6 +375,27 @@ entscheide, welche Information zuerst beschafft werden muss.
 """,
     tools=[WebSearchTool()],
 )
+
+
+# ============================================================
+# RÜCKFRAGE AN DEN NUTZER
+# ============================================================
+
+@function_tool
+async def frage_nutzer(frage: str, grund: str = "") -> str:
+    """
+    Fordert eine notwendige Information direkt vom Nutzer an.
+
+    Dieses Tool soll verwendet werden, wenn Miloš für die sinnvolle
+    Weiterarbeit eine wesentliche Information oder Entscheidung
+    des Nutzers benötigt.
+    """
+
+    return (
+        "WAITING_FOR_USER\n"
+        f"FRAGE: {frage}\n"
+        f"GRUND: {grund}"
+    )
 
 
 # ============================================================
@@ -611,10 +632,76 @@ Debatte nur bei entscheidungsrelevanten Konflikten.
 
 
 ============================================================
+RÜCKFRAGEN AN DEN NUTZER
+============================================================
+
+Du darfst und sollst den Nutzer aktiv nach fehlenden Informationen fragen,
+wenn diese für die sinnvolle Bearbeitung des Auftrags wesentlich sind.
+
+Nutze dafür das Tool:
+
+frage_nutzer
+
+Verwende frage_nutzer insbesondere, wenn:
+
+- ein notwendiges Budget fehlt,
+- ein Zielland oder Standort entscheidend ist,
+- ein Zeitraum benötigt wird,
+- eine wesentliche persönliche Priorität unbekannt ist,
+- notwendige Unternehmensdaten fehlen,
+- notwendige medizinische, rechtliche oder wirtschaftliche Angaben fehlen,
+- mehrere grundlegend verschiedene Wege möglich sind und der Nutzer
+  zunächst eine Entscheidung treffen muss,
+- ein Spezialist ausdrücklich eine Information benötigt, die nur der
+  Nutzer liefern kann.
+
+WICHTIG:
+
+Frage nicht wegen jeder Kleinigkeit nach.
+
+Wenn eine vernünftige Annahme möglich ist:
+- darfst du diese treffen,
+- kennzeichne sie aber als Annahme.
+
+Eine Rückfrage ist sinnvoll, wenn die fehlende Information:
+- die Empfehlung wesentlich verändern könnte,
+- eine zuverlässige Berechnung verhindert,
+- eine Entscheidung unmöglich macht,
+- oder ein erhebliches Fehlerrisiko erzeugt.
+
+Stelle möglichst wenige und präzise Fragen.
+
+Wenn mehrere eng zusammenhängende Angaben fehlen,
+dürfen sie in einer einzigen klar strukturierten Rückfrage gebündelt werden.
+
+Wenn du frage_nutzer verwendest:
+
+1. Formuliere eine konkrete Frage.
+2. Erkläre kurz, warum du diese Information benötigst.
+3. Liefere danach keine scheinbar fertige Abschlussentscheidung.
+4. Warte auf die Antwort des Nutzers.
+
+Wenn der Nutzer anschließend antwortet:
+
+- behandle seine Antwort als Fortsetzung des bisherigen Auftrags,
+- berücksichtige den bisherigen Gesprächskontext,
+- nutze bereits gewonnene Erkenntnisse,
+- rufe bei Bedarf erneut Spezialisten auf,
+- und setze die Bearbeitung fort.
+
+Nutze frage_nutzer NICHT nur deshalb, weil zusätzliche Informationen
+interessant wären.
+
+Der Workflow soll arbeitsfähig bleiben und nicht durch unnötige
+Rückfragen blockiert werden.
+
+
+============================================================
 ABSCHLUSS
 ============================================================
 
-Erstelle am Ende eine klare Synthese.
+Wenn genügend Informationen vorhanden sind,
+erstelle eine klare Synthese.
 
 Bei komplexen Entscheidungen bevorzugte Struktur:
 
@@ -635,5 +722,6 @@ Sprich direkt und natürlich mit dem Nutzer.
         scout_tool,
         james_bond_tool,
         pinky_tool,
+        frage_nutzer,
     ],
 )
