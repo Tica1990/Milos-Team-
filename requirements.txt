@@ -2,3 +2,6 @@ fastapi
 uvicorn[standard]
 openai>=2.25.0
 openai-agents
+httpx
+aiosqlite
+python-dotenv
