@@ -17,7 +17,7 @@ from team import milos
 APP_DIR = Path(__file__).resolve().parent
 DB_PATH = APP_DIR / "milos_memory.db"
 
-app = FastAPI(title="Miloš Team 2.0")
+app = FastAPI(title="Miloš Team 3.0")
 
 
 class ChatRequest(BaseModel):
@@ -39,7 +39,7 @@ TOOL_TO_AGENT = {
 async def health():
     return {
         "ok": True,
-        "app": "Miloš Team 2.0",
+        "app": "Miloš Team 3.0",
     }
 
 
