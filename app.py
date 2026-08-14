@@ -9,7 +9,13 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from agents import Runner, SQLiteSession
-from agents.items import ToolCallItem, ToolCallOutputItem
+from agents.items import (
+    ToolCallItem,
+    ToolCallOutputItem,
+    HandoffCallItem,
+    HandoffOutputItem,
+    MessageOutputItem,
+)
 
 from team import milos
 
@@ -77,7 +83,7 @@ async def root():
 
 
 # ============================================================
-# TOOL-AUSGABE IN TEXT UMWANDELN
+# HILFSFUNKTIONEN
 # ============================================================
 
 def tool_output_to_text(output):
@@ -94,6 +100,29 @@ def tool_output_to_text(output):
         )
     except Exception:
         return str(output)
+
+
+def get_agent_name(agent):
+    if agent is None:
+        return None
+
+    return getattr(agent, "name", None)
+
+
+def add_unique(sequence, value):
+    if not value:
+        return
+
+    if value not in sequence:
+        sequence.append(value)
+
+
+def append_flow(flow, agent_name):
+    if not agent_name:
+        return
+
+    if not flow or flow[-1] != agent_name:
+        flow.append(agent_name)
 
 
 # ============================================================
@@ -133,22 +162,116 @@ def parse_user_question(text):
 # ============================================================
 
 def analyse_run(result):
+
     consulted_agents = []
-    agent_flow = ["Miloš"]
+    agent_flow = []
     tool_calls = []
+    handoffs = []
 
     waiting_for_user = None
 
     # call_id → tool_name
     tool_calls_by_id = {}
 
+    # --------------------------------------------------------
+    # STANDARDSTART
+    # --------------------------------------------------------
+
+    append_flow(agent_flow, "Miloš")
+
+    # --------------------------------------------------------
+    # ALLE NEUEN RUN-ITEMS ANALYSIEREN
+    # --------------------------------------------------------
+
     for item in result.new_items:
 
-        # ----------------------------------------------------
-        # TOOL-AUFRUF
-        # ----------------------------------------------------
+        # ====================================================
+        # 1. WELCHER AGENT HAT DIESES ITEM ERZEUGT?
+        # ====================================================
+
+        item_agent_name = get_agent_name(
+            getattr(item, "agent", None)
+        )
+
+        if item_agent_name:
+            append_flow(
+                agent_flow,
+                item_agent_name,
+            )
+
+            if item_agent_name != "Miloš":
+                add_unique(
+                    consulted_agents,
+                    item_agent_name,
+                )
+
+        # ====================================================
+        # 2. ECHTER HANDOFF
+        # ====================================================
+
+        if isinstance(item, HandoffOutputItem):
+
+            source_name = get_agent_name(
+                item.source_agent
+            )
+
+            target_name = get_agent_name(
+                item.target_agent
+            )
+
+            handoffs.append({
+                "from": source_name,
+                "to": target_name,
+            })
+
+            append_flow(
+                agent_flow,
+                source_name,
+            )
+
+            append_flow(
+                agent_flow,
+                target_name,
+            )
+
+            if (
+                target_name
+                and target_name != "Miloš"
+            ):
+                add_unique(
+                    consulted_agents,
+                    target_name,
+                )
+
+            continue
+
+        # ====================================================
+        # 3. HANDOFF-CALL
+        # ====================================================
+
+        if isinstance(item, HandoffCallItem):
+
+            raw = item.raw_item
+
+            handoff_name = getattr(
+                raw,
+                "name",
+                None,
+            )
+
+            if handoff_name:
+                tool_calls.append(
+                    f"HANDOFF:{handoff_name}"
+                )
+
+            continue
+
+        # ====================================================
+        # 4. TOOL-AUFRUF
+        # ====================================================
 
         if isinstance(item, ToolCallItem):
+
             tool_name = item.tool_name
 
             if not tool_name:
@@ -159,46 +282,123 @@ def analyse_run(result):
             call_id = item.call_id
 
             if call_id:
-                tool_calls_by_id[call_id] = tool_name
+                tool_calls_by_id[
+                    call_id
+                ] = tool_name
 
-            # Spezialisten erkennen
-            agent_name = TOOL_TO_AGENT.get(tool_name)
+            # -----------------------------------------------
+            # Spezialist über Miloš-Tool erkannt
+            # -----------------------------------------------
 
-            if agent_name:
-                if agent_name not in consulted_agents:
-                    consulted_agents.append(agent_name)
+            specialist_name = TOOL_TO_AGENT.get(
+                tool_name
+            )
 
-                agent_flow.append(agent_name)
+            if specialist_name:
 
-        # ----------------------------------------------------
-        # TOOL-AUSGABE
-        # ----------------------------------------------------
+                add_unique(
+                    consulted_agents,
+                    specialist_name,
+                )
 
-        elif isinstance(item, ToolCallOutputItem):
+                append_flow(
+                    agent_flow,
+                    specialist_name,
+                )
+
+            continue
+
+        # ====================================================
+        # 5. TOOL-AUSGABE
+        # ====================================================
+
+        if isinstance(item, ToolCallOutputItem):
 
             call_id = item.call_id
 
             if not call_id:
                 continue
 
-            tool_name = tool_calls_by_id.get(call_id)
+            tool_name = tool_calls_by_id.get(
+                call_id
+            )
 
-            if tool_name != "frage_nutzer":
-                continue
+            # -----------------------------------------------
+            # Rückfrage an Nutzer erkennen
+            # -----------------------------------------------
 
-            output_text = tool_output_to_text(item.output)
+            if tool_name == "frage_nutzer":
 
-            parsed = parse_user_question(output_text)
+                output_text = tool_output_to_text(
+                    item.output
+                )
 
-            if parsed:
-                waiting_for_user = parsed
+                parsed = parse_user_question(
+                    output_text
+                )
 
-    agent_flow.append("Miloš")
+                if parsed:
+                    waiting_for_user = parsed
+
+            continue
+
+        # ====================================================
+        # 6. MESSAGE OUTPUT
+        # ====================================================
+
+        if isinstance(item, MessageOutputItem):
+
+            message_agent = get_agent_name(
+                item.agent
+            )
+
+            if message_agent:
+                append_flow(
+                    agent_flow,
+                    message_agent,
+                )
+
+                if message_agent != "Miloš":
+                    add_unique(
+                        consulted_agents,
+                        message_agent,
+                    )
+
+    # --------------------------------------------------------
+    # LETZTEN AGENTEN DES RUNS BERÜCKSICHTIGEN
+    # --------------------------------------------------------
+
+    last_agent_name = get_agent_name(
+        result.last_agent
+    )
+
+    if last_agent_name:
+        append_flow(
+            agent_flow,
+            last_agent_name,
+        )
+
+        if last_agent_name != "Miloš":
+            add_unique(
+                consulted_agents,
+                last_agent_name,
+            )
+
+    # --------------------------------------------------------
+    # Miloš am Ende ergänzen, wenn er tatsächlich final ist
+    # --------------------------------------------------------
+
+    if last_agent_name == "Miloš":
+        append_flow(
+            agent_flow,
+            "Miloš",
+        )
 
     return {
         "consulted_agents": consulted_agents,
         "agent_flow": agent_flow,
         "tool_calls": tool_calls,
+        "handoffs": handoffs,
         "waiting_for_user": waiting_for_user,
     }
 
@@ -236,7 +436,9 @@ async def chat(req: ChatRequest):
     # SESSION
     # --------------------------------------------------------
 
-    session_id = req.session_id or str(uuid.uuid4())
+    session_id = req.session_id or str(
+        uuid.uuid4()
+    )
 
     session = SQLiteSession(
         session_id=session_id,
@@ -248,6 +450,7 @@ async def chat(req: ChatRequest):
     # --------------------------------------------------------
 
     try:
+
         result = await Runner.run(
             milos,
             message,
@@ -256,6 +459,7 @@ async def chat(req: ChatRequest):
         )
 
     except Exception as exc:
+
         print(
             "MILOŠ RUN ERROR:",
             type(exc).__name__,
@@ -276,19 +480,51 @@ async def chat(req: ChatRequest):
 
     run_info = analyse_run(result)
 
-    waiting = run_info["waiting_for_user"]
+    waiting = run_info[
+        "waiting_for_user"
+    ]
+
+    # --------------------------------------------------------
+    # DEBUG-AUSGABE IM SERVER-LOG
+    # --------------------------------------------------------
+
+    print(
+        "AGENT FLOW:",
+        run_info["agent_flow"],
+    )
+
+    print(
+        "CONSULTED AGENTS:",
+        run_info["consulted_agents"],
+    )
+
+    print(
+        "TOOL CALLS:",
+        run_info["tool_calls"],
+    )
+
+    print(
+        "HANDOFFS:",
+        run_info["handoffs"],
+    )
 
     # --------------------------------------------------------
     # STATUS: WAITING_FOR_USER
     # --------------------------------------------------------
 
     if waiting:
+
         return {
             "session_id": session_id,
 
             "status": "WAITING_FOR_USER",
 
-            "agent": "Miloš",
+            "agent": (
+                get_agent_name(
+                    result.last_agent
+                )
+                or "Miloš"
+            ),
 
             "message": waiting["question"],
 
@@ -304,6 +540,9 @@ async def chat(req: ChatRequest):
 
             "tool_calls":
                 run_info["tool_calls"],
+
+            "handoffs":
+                run_info["handoffs"],
         }
 
     # --------------------------------------------------------
@@ -315,9 +554,16 @@ async def chat(req: ChatRequest):
 
         "status": "COMPLETED",
 
-        "agent": result.last_agent.name,
+        "agent": (
+            get_agent_name(
+                result.last_agent
+            )
+            or "Miloš"
+        ),
 
-        "message": str(result.final_output),
+        "message": str(
+            result.final_output
+        ),
 
         "consulted_agents":
             run_info["consulted_agents"],
@@ -327,4 +573,7 @@ async def chat(req: ChatRequest):
 
         "tool_calls":
             run_info["tool_calls"],
+
+        "handoffs":
+            run_info["handoffs"],
     }
