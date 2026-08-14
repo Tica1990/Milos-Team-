@@ -1,22 +1,33 @@
 <!doctype html>
 <html lang="de">
+
 <head>
   <meta charset="utf-8" />
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1, viewport-fit=cover"
   />
 
-  <meta name="theme-color" content="#0b0b0f" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta
+    name="theme-color"
+    content="#0b0b0f"
+  />
+
+  <meta
+    name="apple-mobile-web-app-capable"
+    content="yes"
+  />
+
   <meta
     name="apple-mobile-web-app-status-bar-style"
     content="black-translucent"
   />
 
-  <title>Miloš Team 2.0</title>
+  <title>Miloš Team</title>
 
   <style>
+
     :root {
       --bg: #0b0b0f;
       --panel: #15151c;
@@ -36,9 +47,10 @@
     html,
     body {
       margin: 0;
-      min-height: 100%;
+      padding: 0;
       background: var(--bg);
       color: var(--text);
+
       font-family:
         -apple-system,
         BlinkMacSystemFont,
@@ -46,6 +58,8 @@
         Inter,
         Arial,
         sans-serif;
+
+      min-height: 100%;
     }
 
     body {
@@ -53,20 +67,33 @@
     }
 
     .app {
-      max-width: 900px;
+      max-width: 820px;
       margin: 0 auto;
       min-height: 100dvh;
+
       display: flex;
       flex-direction: column;
     }
 
+
+    /* =====================================================
+       HEADER
+    ===================================================== */
+
     header {
       position: sticky;
       top: 0;
-      z-index: 20;
-      background: rgba(11, 11, 15, 0.92);
+      z-index: 10;
+
+      background:
+        rgba(11, 11, 15, .92);
+
       backdrop-filter: blur(18px);
-      border-bottom: 1px solid var(--line);
+      -webkit-backdrop-filter: blur(18px);
+
+      border-bottom:
+        1px solid var(--line);
+
       padding:
         calc(env(safe-area-inset-top) + 12px)
         16px
@@ -80,278 +107,385 @@
     }
 
     .orb {
-      width: 44px;
-      height: 44px;
-      border-radius: 14px;
+      width: 48px;
+      height: 48px;
+
+      border-radius: 16px;
+
       background:
         linear-gradient(
           135deg,
           #7c3aed,
           #2563eb
         );
+
       display: grid;
       place-items: center;
+
       font-weight: 800;
-      font-size: 20px;
+      font-size: 21px;
+
       box-shadow:
-        0 8px 30px rgba(124, 58, 237, 0.25);
+        0 8px 30px
+        rgba(124, 58, 237, .25);
     }
 
-    .title-area {
+    .headText {
+      min-width: 0;
       flex: 1;
     }
 
     h1 {
-      font-size: 18px;
+      font-size: 20px;
       margin: 0;
     }
 
     .sub {
       margin-top: 3px;
-      font-size: 12px;
+      font-size: 13px;
       color: var(--muted);
     }
 
-    .status {
+    .live {
       display: flex;
       align-items: center;
-      gap: 6px;
-      font-size: 11px;
+      gap: 7px;
+
       color: var(--muted);
+      font-size: 13px;
     }
 
     .dot {
-      width: 8px;
-      height: 8px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
       background: var(--ok);
     }
 
-    main {
+
+    /* =====================================================
+       CHAT
+    ===================================================== */
+
+    #chat {
       flex: 1;
-      width: 100%;
-      padding: 18px 14px 150px;
-    }
 
-    .welcome {
-      margin: 30px auto;
-      max-width: 640px;
-      text-align: center;
-      color: var(--muted);
-      line-height: 1.55;
-    }
+      display: flex;
+      flex-direction: column;
 
-    .welcome strong {
-      color: var(--text);
+      gap: 16px;
+
+      padding:
+        18px
+        16px
+        160px;
     }
 
     .message {
-      margin: 15px 0;
-      display: flex;
-      flex-direction: column;
-    }
+      max-width: 88%;
 
-    .message.user {
-      align-items: flex-end;
-    }
+      padding:
+        14px
+        16px;
 
-    .message.assistant {
-      align-items: flex-start;
-    }
+      border-radius: 20px;
 
-    .name {
-      font-size: 11px;
-      color: var(--muted);
-      margin: 0 7px 5px;
-    }
+      line-height: 1.55;
+      font-size: 16px;
 
-    .bubble {
-      max-width: 86%;
-      border-radius: 18px;
-      padding: 12px 14px;
-      line-height: 1.5;
       white-space: pre-wrap;
-      word-wrap: break-word;
+      overflow-wrap: anywhere;
     }
 
-    .user .bubble {
-      background: var(--accent);
+    .user {
+      align-self: flex-end;
+
+      background:
+        linear-gradient(
+          135deg,
+          #7c3aed,
+          #8b5cf6
+        );
+
       color: white;
+
       border-bottom-right-radius: 6px;
     }
 
-    .assistant .bubble {
+    .assistant {
+      align-self: flex-start;
+
       background: var(--panel);
       border: 1px solid var(--line);
+
       border-bottom-left-radius: 6px;
     }
 
-    .activity {
-      width: min(86%, 680px);
-      margin-bottom: 8px;
-      padding: 10px 12px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(139, 92, 246, 0.06);
+    .error {
+      align-self: flex-start;
+
+      background:
+        rgba(239, 68, 68, .10);
+
+      border:
+        1px solid
+        rgba(239, 68, 68, .50);
+
+      color: #fecaca;
     }
 
-    .activity-title {
-      font-size: 11px;
-      color: var(--muted);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
 
-    .flow {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
+    /* =====================================================
+       AGENT LABEL
+    ===================================================== */
+
+    .agent {
+      display: inline-flex;
       align-items: center;
+      gap: 7px;
+
+      margin-bottom: 9px;
+
+      font-size: 12px;
+      font-weight: 700;
+
+      color: #c4b5fd;
+    }
+
+    .agentDot {
+      width: 7px;
+      height: 7px;
+
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+
+    /* =====================================================
+       WORKFLOW STATUS
+    ===================================================== */
+
+    .workflowBox {
+      align-self: flex-start;
+
+      width: min(
+        92%,
+        560px
+      );
+
+      padding: 15px 16px;
+
+      border-radius: 20px;
+
+      border:
+        1px solid
+        var(--line);
+
+      background:
+        var(--panel);
+    }
+
+    .workflowTitle {
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .workflowStatus {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+
+      margin-top: 9px;
+
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .spinner {
+      width: 15px;
+      height: 15px;
+
+      border-radius: 50%;
+
+      border:
+        2px solid
+        rgba(139, 92, 246, .25);
+
+      border-top-color:
+        #8b5cf6;
+
+      animation:
+        spin .8s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform:
+          rotate(360deg);
+      }
+    }
+
+
+    /* =====================================================
+       AGENT CHIPS
+    ===================================================== */
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+
+      margin-top: 12px;
     }
 
     .chip {
-      font-size: 12px;
-      padding: 6px 9px;
-      border-radius: 999px;
-      background: var(--panel2);
-      border: 1px solid var(--line);
+      padding:
+        6px 9px;
+
+      border-radius:
+        999px;
+
+      background:
+        var(--panel2);
+
+      border:
+        1px solid
+        var(--line);
+
+      color:
+        #d4d4d8;
+
+      font-size:
+        11px;
     }
 
-    .arrow {
-      color: var(--muted);
-      font-size: 12px;
-    }
 
-    .typing {
-      display: inline-flex;
-      gap: 5px;
-      padding: 4px;
-    }
+    /* =====================================================
+       INPUT
+    ===================================================== */
 
-    .typing span {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: var(--muted);
-      animation: bounce 1.3s infinite;
-    }
-
-    .typing span:nth-child(2) {
-      animation-delay: 0.15s;
-    }
-
-    .typing span:nth-child(3) {
-      animation-delay: 0.3s;
-    }
-
-    @keyframes bounce {
-      0%,
-      60%,
-      100% {
-        transform: translateY(0);
-        opacity: 0.4;
-      }
-
-      30% {
-        transform: translateY(-4px);
-        opacity: 1;
-      }
-    }
-
-    .composer-wrap {
+    .composerWrap {
       position: fixed;
+
       left: 0;
       right: 0;
       bottom: 0;
-      z-index: 30;
-      padding:
-        10px
-        12px
-        calc(env(safe-area-inset-bottom) + 10px);
+
+      z-index: 20;
+
       background:
         linear-gradient(
-          to top,
-          var(--bg) 75%,
-          rgba(11, 11, 15, 0)
+          transparent,
+          rgba(11, 11, 15, .97) 24%
+        );
+
+      padding:
+        36px
+        16px
+        calc(
+          env(safe-area-inset-bottom)
+          + 16px
         );
     }
 
     .composer {
-      max-width: 870px;
+      max-width: 788px;
       margin: 0 auto;
+
       display: flex;
       align-items: flex-end;
-      gap: 8px;
-      padding: 8px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      box-shadow:
-        0 12px 35px rgba(0, 0, 0, 0.28);
+
+      gap: 10px;
+
+      border:
+        1px solid
+        var(--line);
+
+      background:
+        var(--panel);
+
+      border-radius:
+        25px;
+
+      padding:
+        10px;
     }
 
     textarea {
       flex: 1;
-      min-height: 44px;
+
+      min-height: 48px;
       max-height: 160px;
+
       resize: none;
-      border: none;
-      outline: none;
+
+      border: 0;
+      outline: 0;
+
       background: transparent;
       color: var(--text);
-      font: inherit;
-      line-height: 1.4;
-      padding: 11px 10px;
+
+      padding:
+        12px 10px;
+
+      font-size: 16px;
+      font-family: inherit;
     }
 
     textarea::placeholder {
-      color: #71717a;
+      color:
+        #71717a;
     }
 
     button {
-      width: 44px;
-      height: 44px;
-      flex: 0 0 44px;
-      border-radius: 15px;
-      border: none;
+      flex: 0 0 auto;
+
+      width: 50px;
+      height: 50px;
+
+      border: 0;
+      border-radius: 17px;
+
       background: var(--accent);
       color: white;
-      font-size: 19px;
+
+      font-size: 29px;
+
       cursor: pointer;
     }
 
     button:disabled {
-      opacity: 0.45;
+      opacity: .45;
       cursor: default;
     }
 
-    .error {
-      color: #fecaca;
-      border-color: rgba(239, 68, 68, 0.4) !important;
-      background: rgba(239, 68, 68, 0.08) !important;
+
+    /* =====================================================
+       SMALL STATUS LINE
+    ===================================================== */
+
+    #bottomStatus {
+      max-width: 788px;
+      margin:
+        0 auto 7px;
+
+      color: var(--muted);
+      font-size: 11px;
+
+      min-height: 15px;
     }
 
-    @media (min-width: 700px) {
-      main {
-        padding-left: 24px;
-        padding-right: 24px;
-      }
-
-      .bubble {
-        max-width: 75%;
-      }
-
-      .activity {
-        width: min(75%, 680px);
-      }
-    }
   </style>
 </head>
+
 
 <body>
 
 <div class="app">
+
+  <!-- ===================================================
+       HEADER
+  ==================================================== -->
 
   <header>
 
@@ -361,16 +495,26 @@
         M
       </div>
 
-      <div class="title-area">
-        <h1>Miloš Team</h1>
+      <div class="headText">
+
+        <h1>
+          Miloš Team
+        </h1>
+
         <div class="sub">
           Eigenanalyse · Recherche · Debatte
         </div>
+
       </div>
 
-      <div class="status">
+      <div class="live">
+
         <span class="dot"></span>
-        live
+
+        <span>
+          live
+        </span>
+
       </div>
 
     </div>
@@ -378,23 +522,20 @@
   </header>
 
 
-  <main id="chat">
+  <!-- ===================================================
+       CHAT
+  ==================================================== -->
 
-    <div
-      class="welcome"
-      id="welcome"
-    >
-      <strong>Miloš Team 2.0</strong>
-      <br><br>
-      Miloš kann Spezialisten unabhängig analysieren,
-      recherchieren und bei relevanten Meinungsunterschieden
-      gegeneinander argumentieren lassen.
-    </div>
-
-  </main>
+  <main id="chat"></main>
 
 
-  <div class="composer-wrap">
+  <!-- ===================================================
+       INPUT
+  ==================================================== -->
+
+  <div class="composerWrap">
+
+    <div id="bottomStatus"></div>
 
     <div class="composer">
 
@@ -405,7 +546,8 @@
       ></textarea>
 
       <button
-        id="send"
+        id="sendButton"
+        type="button"
         aria-label="Senden"
       >
         ↑
@@ -420,371 +562,646 @@
 
 <script>
 
-const chat =
-  document.getElementById("chat");
+  // =======================================================
+  // KONFIGURATION
+  // =======================================================
 
-const input =
-  document.getElementById("input");
+  const POLL_INTERVAL = 2000;
 
-const send =
-  document.getElementById("send");
+  const chat =
+    document.getElementById("chat");
 
-const welcome =
-  document.getElementById("welcome");
+  const input =
+    document.getElementById("input");
 
+  const sendButton =
+    document.getElementById("sendButton");
 
-let sessionId =
-  localStorage.getItem(
-    "milos_session_id"
-  );
-
-
-function scrollBottom() {
-
-  window.scrollTo({
-    top: document.body.scrollHeight,
-    behavior: "smooth"
-  });
-
-}
+  const bottomStatus =
+    document.getElementById("bottomStatus");
 
 
-function hideWelcome() {
+  // =======================================================
+  // SESSION
+  // =======================================================
 
-  if (welcome) {
-    welcome.style.display = "none";
+  let sessionId =
+    localStorage.getItem(
+      "milos_session_id"
+    );
+
+  let activeWorkflowId =
+    localStorage.getItem(
+      "milos_active_workflow"
+    );
+
+  let workflowRunning = false;
+
+
+  // =======================================================
+  // HILFSFUNKTIONEN
+  // =======================================================
+
+  function scrollBottom() {
+
+    window.scrollTo({
+      top:
+        document.body.scrollHeight,
+      behavior:
+        "smooth"
+    });
+
   }
 
-}
+
+  function setRunning(running) {
+
+    workflowRunning = running;
+
+    sendButton.disabled =
+      running;
+
+    input.disabled =
+      running;
+
+    bottomStatus.textContent =
+      running
+        ? "Miloš Team arbeitet im Hintergrund …"
+        : "";
+
+  }
 
 
-function addMessage(
-  role,
-  name,
-  text,
-  extraClass = ""
-) {
+  function addUserMessage(text) {
 
-  hideWelcome();
+    const box =
+      document.createElement("div");
 
-  const wrap =
-    document.createElement("div");
+    box.className =
+      "message user";
 
-  wrap.className =
-    `message ${role}`;
+    box.textContent =
+      text;
 
+    chat.appendChild(box);
 
-  const label =
-    document.createElement("div");
-
-  label.className = "name";
-  label.textContent = name;
+    scrollBottom();
+  }
 
 
-  const bubble =
-    document.createElement("div");
-
-  bubble.className =
-    `bubble ${extraClass}`;
-
-  bubble.textContent = text;
-
-
-  wrap.appendChild(label);
-  wrap.appendChild(bubble);
-
-  chat.appendChild(wrap);
-
-  scrollBottom();
-
-  return wrap;
-
-}
-
-
-function addAgentFlow(flow) {
-
-  if (
-    !Array.isArray(flow) ||
-    flow.length <= 2
+  function addAssistantMessage(
+    text,
+    agent = "Miloš",
+    agents = []
   ) {
-    return;
-  }
 
+    const box =
+      document.createElement("div");
 
-  const wrap =
-    document.createElement("div");
+    box.className =
+      "message assistant";
 
-  wrap.className =
-    "message assistant";
 
+    const agentLine =
+      document.createElement("div");
 
-  const activity =
-    document.createElement("div");
+    agentLine.className =
+      "agent";
 
-  activity.className =
-    "activity";
 
+    const dot =
+      document.createElement("span");
 
-  const title =
-    document.createElement("div");
+    dot.className =
+      "agentDot";
 
-  title.className =
-    "activity-title";
 
-  title.textContent =
-    "Tatsächlicher Teamlauf";
+    const name =
+      document.createElement("span");
 
+    name.textContent =
+      agent || "Miloš";
 
-  const flowEl =
-    document.createElement("div");
 
-  flowEl.className =
-    "flow";
+    agentLine.appendChild(dot);
+    agentLine.appendChild(name);
 
+    box.appendChild(agentLine);
 
-  flow.forEach(
-    (agent, index) => {
 
-      const chip =
-        document.createElement("span");
+    const content =
+      document.createElement("div");
 
-      chip.className =
-        "chip";
+    content.textContent =
+      text || "";
 
-      chip.textContent =
-        agent;
+    box.appendChild(content);
 
-      flowEl.appendChild(chip);
 
+    if (
+      Array.isArray(agents)
+      &&
+      agents.length
+    ) {
 
-      if (index < flow.length - 1) {
+      const chips =
+        document.createElement("div");
 
-        const arrow =
-          document.createElement("span");
+      chips.className =
+        "chips";
 
-        arrow.className =
-          "arrow";
+      agents.forEach(
+        agentName => {
 
-        arrow.textContent =
-          "→";
+          const chip =
+            document.createElement("span");
 
-        flowEl.appendChild(arrow);
+          chip.className =
+            "chip";
 
-      }
+          chip.textContent =
+            agentName;
 
-    }
-  );
+          chips.appendChild(chip);
 
-
-  activity.appendChild(title);
-  activity.appendChild(flowEl);
-
-  wrap.appendChild(activity);
-
-  chat.appendChild(wrap);
-
-}
-
-
-function addTyping() {
-
-  hideWelcome();
-
-  const wrap =
-    document.createElement("div");
-
-  wrap.className =
-    "message assistant";
-
-
-  const label =
-    document.createElement("div");
-
-  label.className =
-    "name";
-
-  label.textContent =
-    "Miloš Team arbeitet";
-
-
-  const bubble =
-    document.createElement("div");
-
-  bubble.className =
-    "bubble";
-
-
-  const typing =
-    document.createElement("div");
-
-  typing.className =
-    "typing";
-
-  typing.innerHTML =
-    "<span></span><span></span><span></span>";
-
-
-  bubble.appendChild(typing);
-
-  wrap.appendChild(label);
-  wrap.appendChild(bubble);
-
-  chat.appendChild(wrap);
-
-  scrollBottom();
-
-  return wrap;
-
-}
-
-
-async function submit() {
-
-  const text =
-    input.value.trim();
-
-  if (!text) {
-    return;
-  }
-
-
-  input.value = "";
-  input.style.height = "auto";
-
-  addMessage(
-    "user",
-    "Du",
-    text
-  );
-
-
-  send.disabled = true;
-
-  const typing =
-    addTyping();
-
-
-  try {
-
-    const response =
-      await fetch(
-        "/api/chat",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
-
-          body: JSON.stringify({
-            message: text,
-            session_id: sessionId
-          })
         }
       );
 
+      box.appendChild(chips);
+    }
 
-    const data =
-      await response.json();
+
+    chat.appendChild(box);
+
+    scrollBottom();
+  }
 
 
-    typing.remove();
+  function addError(text) {
+
+    const box =
+      document.createElement("div");
+
+    box.className =
+      "message error";
+
+    box.textContent =
+      text;
+
+    chat.appendChild(box);
+
+    scrollBottom();
+  }
+
+
+  function createWorkflowBox() {
+
+    const box =
+      document.createElement("div");
+
+    box.className =
+      "workflowBox";
+
+    box.id =
+      "activeWorkflowBox";
+
+
+    const title =
+      document.createElement("div");
+
+    title.className =
+      "workflowTitle";
+
+    title.textContent =
+      "Miloš arbeitet …";
+
+
+    const status =
+      document.createElement("div");
+
+    status.className =
+      "workflowStatus";
+
+
+    const spinner =
+      document.createElement("div");
+
+    spinner.className =
+      "spinner";
+
+
+    const statusText =
+      document.createElement("span");
+
+    statusText.id =
+      "workflowStatusText";
+
+    statusText.textContent =
+      "Workflow wird gestartet";
+
+
+    status.appendChild(spinner);
+    status.appendChild(statusText);
+
+    box.appendChild(title);
+    box.appendChild(status);
+
+    chat.appendChild(box);
+
+    scrollBottom();
+
+    return box;
+  }
+
+
+  function getWorkflowBox() {
+
+    return document.getElementById(
+      "activeWorkflowBox"
+    );
+
+  }
+
+
+  function removeWorkflowBox() {
+
+    const box =
+      getWorkflowBox();
+
+    if (box) {
+      box.remove();
+    }
+
+  }
+
+
+  function updateWorkflowBox(
+    status
+  ) {
+
+    const statusText =
+      document.getElementById(
+        "workflowStatusText"
+      );
+
+    if (!statusText) {
+      return;
+    }
+
+
+    if (status === "QUEUED") {
+
+      statusText.textContent =
+        "Workflow wird vorbereitet …";
+
+    }
+
+    else if (status === "RUNNING") {
+
+      statusText.textContent =
+        "Agenten analysieren und arbeiten …";
+
+    }
+
+    else if (
+      status ===
+      "WAITING_FOR_USER"
+    ) {
+
+      statusText.textContent =
+        "Miloš wartet auf deine Antwort.";
+
+    }
+
+    else if (
+      status ===
+      "WAITING_FOR_APPROVAL"
+    ) {
+
+      statusText.textContent =
+        "Miloš wartet auf deine Freigabe.";
+
+    }
+
+    else {
+
+      statusText.textContent =
+        status;
+
+    }
+
+  }
+
+
+  // =======================================================
+  // HTTP
+  // =======================================================
+
+  async function fetchJSON(
+    url,
+    options = {}
+  ) {
+
+    const response =
+      await fetch(
+        url,
+        options
+      );
+
+    let data = null;
+
+    try {
+
+      data =
+        await response.json();
+
+    }
+
+    catch (_) {
+
+      // Keine JSON-Antwort
+
+    }
 
 
     if (!response.ok) {
 
       const detail =
-        data.detail ||
-        "Unbekannter Serverfehler.";
+        data?.detail
+        ||
+        `HTTP ${response.status}`;
 
-      addMessage(
-        "assistant",
-        "Fehler",
-        detail,
-        "error"
-      );
+      throw new Error(detail);
+    }
 
-      return;
+    return data;
 
+  }
+
+
+  // =======================================================
+  // WORKFLOW POLLING
+  // =======================================================
+
+  async function pollWorkflow(
+    workflowId
+  ) {
+
+    setRunning(true);
+
+    if (!getWorkflowBox()) {
+      createWorkflowBox();
     }
 
 
-    if (data.session_id) {
+    while (true) {
 
-      sessionId =
-        data.session_id;
+      try {
+
+        const data =
+          await fetchJSON(
+            `/api/workflow/${workflowId}`
+          );
+
+
+        updateWorkflowBox(
+          data.status
+        );
+
+
+        // -----------------------------------------------
+        // FERTIG
+        // -----------------------------------------------
+
+        if (
+          data.status ===
+          "COMPLETED"
+        ) {
+
+          removeWorkflowBox();
+
+          addAssistantMessage(
+            data.message,
+            data.agent || "Miloš",
+            data.consulted_agents || []
+          );
+
+          activeWorkflowId =
+            null;
+
+          localStorage.removeItem(
+            "milos_active_workflow"
+          );
+
+          setRunning(false);
+
+          input.focus();
+
+          return;
+        }
+
+
+        // -----------------------------------------------
+        // FEHLER
+        // -----------------------------------------------
+
+        if (
+          data.status ===
+          "FAILED"
+        ) {
+
+          removeWorkflowBox();
+
+          addError(
+            "Workflow fehlgeschlagen:\n\n"
+            +
+            (
+              data.error
+              ||
+              "Unbekannter Fehler."
+            )
+          );
+
+          activeWorkflowId =
+            null;
+
+          localStorage.removeItem(
+            "milos_active_workflow"
+          );
+
+          setRunning(false);
+
+          return;
+        }
+
+
+        // -----------------------------------------------
+        // SPÄTER:
+        // WAITING_FOR_USER
+        // WAITING_FOR_APPROVAL
+        // -----------------------------------------------
+
+      }
+
+      catch (error) {
+
+        console.error(
+          "Polling-Fehler:",
+          error
+        );
+
+        bottomStatus.textContent =
+          "Verbindung kurz unterbrochen – Workflow läuft weiter …";
+
+      }
+
+
+      await new Promise(
+        resolve =>
+          setTimeout(
+            resolve,
+            POLL_INTERVAL
+          )
+      );
+
+    }
+
+  }
+
+
+  // =======================================================
+  // NACHRICHT SENDEN
+  // =======================================================
+
+  async function sendMessage() {
+
+    if (workflowRunning) {
+      return;
+    }
+
+
+    const message =
+      input.value.trim();
+
+    if (!message) {
+      return;
+    }
+
+
+    addUserMessage(message);
+
+    input.value = "";
+
+    resizeTextarea();
+
+    createWorkflowBox();
+
+    setRunning(true);
+
+
+    try {
+
+      const data =
+        await fetchJSON(
+          "/api/chat",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify({
+                message:
+                  message,
+
+                session_id:
+                  sessionId
+              })
+          }
+        );
+
+
+      // -----------------------------------------------
+      // Session speichern
+      // -----------------------------------------------
+
+      if (data.session_id) {
+
+        sessionId =
+          data.session_id;
+
+        localStorage.setItem(
+          "milos_session_id",
+          sessionId
+        );
+
+      }
+
+
+      // -----------------------------------------------
+      // Workflow speichern
+      // -----------------------------------------------
+
+      if (!data.workflow_id) {
+
+        throw new Error(
+          "Server hat keine workflow_id geliefert."
+        );
+
+      }
+
+
+      activeWorkflowId =
+        data.workflow_id;
 
       localStorage.setItem(
-        "milos_session_id",
-        sessionId
+        "milos_active_workflow",
+        activeWorkflowId
+      );
+
+
+      // -----------------------------------------------
+      // Jetzt NICHT auf Miloš warten.
+      // Status wird separat abgefragt.
+      // -----------------------------------------------
+
+      await pollWorkflow(
+        activeWorkflowId
       );
 
     }
 
+    catch (error) {
 
-    addAgentFlow(
-      data.agent_flow
-    );
+      console.error(error);
 
+      removeWorkflowBox();
 
-    addMessage(
-      "assistant",
-      data.agent || "Miloš",
-      data.message || ""
-    );
+      addError(
+        "Verbindungsfehler\n\n"
+        +
+        (
+          error?.message
+          ||
+          String(error)
+        )
+      );
 
-
-  } catch (error) {
-
-    typing.remove();
-
-    addMessage(
-      "assistant",
-      "Verbindungsfehler",
-      String(error),
-      "error"
-    );
-
-  } finally {
-
-    send.disabled = false;
-
-    input.focus();
-
-  }
-
-}
-
-
-send.addEventListener(
-  "click",
-  submit
-);
-
-
-input.addEventListener(
-  "keydown",
-  event => {
-
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey
-    ) {
-
-      event.preventDefault();
-      submit();
+      setRunning(false);
 
     }
 
   }
-);
 
 
-input.addEventListener(
-  "input",
-  () => {
+  // =======================================================
+  // TEXTAREA
+  // =======================================================
+
+  function resizeTextarea() {
 
     input.style.height =
       "auto";
@@ -793,10 +1210,77 @@ input.addEventListener(
       Math.min(
         input.scrollHeight,
         160
-      ) + "px";
+      )
+      +
+      "px";
 
   }
-);
+
+
+  input.addEventListener(
+    "input",
+    resizeTextarea
+  );
+
+
+  input.addEventListener(
+    "keydown",
+    event => {
+
+      if (
+        event.key === "Enter"
+        &&
+        !event.shiftKey
+      ) {
+
+        event.preventDefault();
+
+        sendMessage();
+
+      }
+
+    }
+  );
+
+
+  sendButton.addEventListener(
+    "click",
+    sendMessage
+  );
+
+
+  // =======================================================
+  // SEITE WIEDER GEÖFFNET
+  // =======================================================
+
+  async function resumeExistingWorkflow() {
+
+    if (!activeWorkflowId) {
+      return;
+    }
+
+    /*
+      Besonders wichtig auf dem iPhone:
+
+      Wenn Safari geschlossen oder aktualisiert wurde,
+      kennen wir die workflow_id weiterhin.
+
+      Deshalb versucht die Oberfläche automatisch,
+      den laufenden Workflow wieder aufzunehmen.
+    */
+
+    createWorkflowBox();
+
+    setRunning(true);
+
+    await pollWorkflow(
+      activeWorkflowId
+    );
+
+  }
+
+
+  resumeExistingWorkflow();
 
 </script>
 
