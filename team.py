@@ -1,4 +1,4 @@
-from agents import Agent, WebSearchTool, function_tool
+from agents import Agent, Runner, WebSearchTool, function_tool
 
 
 # ============================================================
@@ -49,6 +49,23 @@ RECHERCHE
 Recherche ist kein Selbstzweck.
 Nutze sie, wenn aktuelle, externe oder überprüfbare Fakten die Entscheidung
 wesentlich verbessern können.
+
+AGENTENÜBERGABE
+
+Wenn du Ergebnisse eines anderen Agenten erhältst:
+
+- behandle sie als Arbeitsmaterial,
+- prüfe sie aus deiner eigenen Fachperspektive,
+- verliere enthaltene Quellen und wichtige Fakten nicht,
+- unterscheide weiterhin zwischen verifizierten Fakten und Annahmen,
+- behaupte niemals, dir seien Informationen nicht übergeben worden,
+  wenn sie ausdrücklich im Auftrag enthalten sind.
+
+Wenn ein vorheriger Agent Quellen geliefert hat:
+- beziehe dich auf diese Quellen,
+- verändere URLs oder Firmennamen nicht eigenmächtig,
+- kennzeichne fehlende Informationen,
+- erfinde keine Ergänzungen.
 """
 
 
@@ -110,6 +127,29 @@ Bei Bedarf recherchiere:
 - Unternehmen
 - Branchenentwicklung
 - wirtschaftliche Kennzahlen
+
+WENN DU SCOUT-ERGEBNISSE ERHÄLTST
+
+Wenn dir im Auftrag ein Abschnitt mit
+"SCOUT-RECHERCHE" oder "RESEARCH PACKET" übergeben wird:
+
+1. Lies diesen Inhalt vollständig.
+2. Verwende die darin enthaltenen Fakten und Quellen.
+3. Führe darauf deine wirtschaftliche Bewertung durch.
+4. Verlange nicht erneut Informationen, die bereits enthalten sind.
+5. Kennzeichne fehlende Daten ausdrücklich.
+6. Priorisiere niemals auf Basis erfundener Mitarbeiterzahlen,
+   Umsätze, Verträge oder Wechselabsichten.
+7. Du darfst zusätzliche Web-Recherche durchführen, wenn dies
+   die Bewertung verbessert.
+
+Deine Bewertung soll möglichst beantworten:
+
+- Welche Option ist wirtschaftlich am attraktivsten?
+- Warum?
+- Welche belastbaren Fakten sprechen dafür?
+- Welche Annahmen sind noch nötig?
+- Welche Information würde das Ranking verändern?
 """,
     tools=[WebSearchTool()],
 )
@@ -171,6 +211,11 @@ Wenn Mirjana ein Geschäftsmodell vorschlägt:
 - suche rechtliche Schwachstellen,
 - aber auch legale Gestaltungsmöglichkeiten.
 
+Wenn dir Ergebnisse anderer Agenten übergeben werden:
+- arbeite ausdrücklich auf diesen Ergebnissen weiter,
+- verliere enthaltene Quellen und Fakten nicht,
+- prüfe insbesondere rechtliche Schlussfolgerungen selbst.
+
 Bei aktuellen Rechtsfragen recherchiere grundsätzlich,
 wenn die Rechtslage zeitabhängig oder jurisdiktionsabhängig ist.
 """,
@@ -227,6 +272,11 @@ In der Arbeitsmedizin zusätzlich:
 Wenn wirtschaftliche Interessen medizinischer Qualität widersprechen,
 sprich den Konflikt offen an.
 
+Wenn dir Rechercheergebnisse oder Analysen anderer Agenten übergeben werden:
+- nutze diese als Ausgangsmaterial,
+- prüfe medizinische Aussagen unabhängig,
+- erfinde keine medizinischen Tatsachen.
+
 Recherchiere aktuelle medizinische Fragen bei Bedarf anhand
 hochwertiger medizinischer Quellen.
 """,
@@ -279,6 +329,61 @@ Kennzeichne besonders:
 - Informationslücke
 
 Recherche ist dein Hauptwerkzeug.
+
+============================================================
+RECHERCHEPAKET
+============================================================
+
+Wenn dein Ergebnis von einem anderen Agenten weiterverarbeitet werden soll,
+liefere ein möglichst übergabefähiges Recherchepaket.
+
+Bevorzugte Struktur:
+
+RESEARCH PACKET
+
+AUFTRAG:
+- kurze Beschreibung
+
+VERIFIZIERTE FAKTEN:
+- Fakt
+- Quelle/URL
+- Abruf- bzw. Aktualitätskontext, soweit erkennbar
+
+OBJEKTE / UNTERNEHMEN / OPTIONEN:
+Für jedes Objekt möglichst:
+- Name
+- Ort/Land
+- Branche/Kategorie
+- Website
+- Kontakt
+- relevante Fakten
+- Quelle
+
+ANNAHMEN:
+- ...
+
+INFORMATIONSLÜCKEN:
+- ...
+
+TOP-FUNDS:
+- ...
+
+WARNSIGNALE:
+- ...
+
+QUELLEN:
+- URL
+- URL
+
+WICHTIG:
+
+- Verwende echte Web-Recherche, wenn Verifikation verlangt wird.
+- Erfinde keine Quellen.
+- Wenn eine Information nicht gefunden wurde, schreibe
+  "nicht öffentlich verifiziert".
+- Eine Vermutung ist kein Fakt.
+- Bestehende Verträge, Kundenabsichten, Mitarbeiterzahlen und Umsätze
+  nur nennen, wenn belastbar belegt.
 """,
     tools=[WebSearchTool()],
 )
@@ -323,6 +428,11 @@ Prüfe:
 
 Recherchiere bei internationalen Fragen auch in fremdsprachigen Quellen,
 wenn dies hilfreich ist.
+
+Wenn dir Ergebnisse von Scout oder anderen Agenten übergeben werden:
+- verwende sie ausdrücklich,
+- überprüfe internationale Unterschiede selbst,
+- verliere enthaltene Quellen nicht.
 
 Du sollst nicht automatisch Deutschland als beste Lösung betrachten.
 """,
@@ -372,6 +482,11 @@ vereinfache ihn.
 
 Wenn Informationen fehlen:
 entscheide, welche Information zuerst beschafft werden muss.
+
+Wenn dir Analysen oder Rechercheergebnisse anderer Agenten übergeben werden:
+- arbeite direkt auf ihnen weiter,
+- wiederhole nicht unnötig die gesamte Analyse,
+- verwandle sie in konkrete nächste Schritte.
 """,
     tools=[WebSearchTool()],
 )
@@ -399,6 +514,106 @@ async def frage_nutzer(frage: str, grund: str = "") -> str:
 
 
 # ============================================================
+# DETERMINISTISCHER SCOUT -> MIRJANA WORKFLOW
+# ============================================================
+
+@function_tool
+async def recherche_und_bewertung(
+    rechercheauftrag: str,
+    bewertungsauftrag: str,
+) -> str:
+    """
+    Führt einen abhängigen Zwei-Agenten-Workflow aus.
+
+    Schritt 1:
+    Scout recherchiert den Rechercheauftrag.
+
+    Schritt 2:
+    Scouts vollständiges Ergebnis wird technisch und ausdrücklich
+    als Eingabe an Mirjana übergeben.
+
+    Nutze dieses Tool immer dann, wenn Mirjanas wirtschaftliche Bewertung
+    von vorher recherchierten Fakten, Unternehmen, Preisen, Märkten oder
+    Quellen abhängt.
+    """
+
+    scout_prompt = f"""
+Führe folgende Recherche durch:
+
+{rechercheauftrag}
+
+WICHTIG:
+- Nutze Web-Recherche, wenn aktuelle oder überprüfbare Fakten benötigt werden.
+- Liefere ein vollständiges RESEARCH PACKET.
+- Nenne konkrete Quellen/URLs.
+- Erfinde keine Angaben.
+- Markiere nicht verifizierbare Informationen ausdrücklich.
+"""
+
+    scout_result = await Runner.run(
+        scout,
+        scout_prompt,
+        max_turns=10,
+    )
+
+    scout_output = str(scout_result.final_output)
+
+    mirjana_prompt = f"""
+Du erhältst jetzt das vollständige Rechercheergebnis von Scout.
+
+============================================================
+SCOUT-RECHERCHE / RESEARCH PACKET
+============================================================
+
+{scout_output}
+
+============================================================
+DEIN BEWERTUNGSAUFTRAG
+============================================================
+
+{bewertungsauftrag}
+
+============================================================
+VERBINDLICHE REGELN
+============================================================
+
+1. Scouts Recherche wurde dir technisch vollständig übergeben.
+2. Behaupte nicht, du hättest keinen Zugriff auf Scouts Ergebnisse.
+3. Nutze die enthaltenen Fakten und Quellen aktiv.
+4. Prüfe die wirtschaftlichen Schlussfolgerungen selbst.
+5. Erfinde keine fehlenden Mitarbeiterzahlen, Umsätze,
+   Vertragslaufzeiten oder Kundenabsichten.
+6. Wenn Daten fehlen, erkläre genau, welche.
+7. Zusätzliche Web-Recherche ist erlaubt.
+8. Erstelle eine klare Priorisierung nur soweit die Fakten dies tragen.
+"""
+
+    mirjana_result = await Runner.run(
+        mirjana,
+        mirjana_prompt,
+        max_turns=10,
+    )
+
+    mirjana_output = str(mirjana_result.final_output)
+
+    return f"""
+WORKFLOW_STATUS: COMPLETED
+
+============================================================
+SCOUT
+============================================================
+
+{scout_output}
+
+============================================================
+MIRJANA
+============================================================
+
+{mirjana_output}
+"""
+
+
+# ============================================================
 # SPEZIALISTEN ALS TOOLS FÜR MILOŠ
 # ============================================================
 
@@ -406,8 +621,9 @@ mirjana_tool = mirjana.as_tool(
     tool_name="frage_mirjana",
     tool_description=(
         "Lasse Mirjana eine unabhängige wirtschaftliche, strategische oder "
-        "unternehmerische Analyse durchführen. Kann auch für eine zweite "
-        "Debattenrunde erneut aufgerufen werden."
+        "unternehmerische Analyse durchführen. Verwende dieses Tool für "
+        "eigenständige Analysen. Wenn Mirjana vorherige Scout-Recherche "
+        "zwingend benötigt, verwende stattdessen recherche_und_bewertung."
     ),
     max_turns=8,
 )
@@ -435,7 +651,9 @@ scout_tool = scout.as_tool(
     tool_name="frage_scout",
     tool_description=(
         "Lasse Scout tief und kreativ recherchieren und ungewöhnliche "
-        "Informationen oder Chancen suchen."
+        "Informationen oder Chancen suchen. Für Recherche, die anschließend "
+        "zwingend von Mirjana bewertet werden soll, verwende bevorzugt "
+        "recherche_und_bewertung."
     ),
     max_turns=10,
 )
@@ -571,6 +789,100 @@ ungewöhnliche Recherche:
 
 
 ============================================================
+VERBINDLICHE AGENT-ZU-AGENT-ÜBERGABE
+============================================================
+
+WICHTIG:
+
+Ein Spezialist als Tool besitzt nicht automatisch den vollständigen
+Arbeitskontext eines anderen Spezialisten.
+
+Wenn Agent B auf dem konkreten Ergebnis von Agent A aufbauen soll,
+musst du Agent A's Ergebnis ausdrücklich an Agent B übergeben.
+
+Du darfst NICHT davon ausgehen, dass Agent B Scouts vorherige
+Recherche automatisch kennt.
+
+
+============================================================
+SCOUT -> MIRJANA
+============================================================
+
+Wenn folgende Reihenfolge benötigt wird:
+
+1. Scout recherchiert Fakten, Unternehmen, Preise, Märkte oder Quellen.
+2. Mirjana soll GENAU DIESE Recherche wirtschaftlich bewerten.
+
+Dann verwende bevorzugt das Tool:
+
+recherche_und_bewertung
+
+Dieses Tool führt die Kette technisch aus:
+
+Scout
+→ vollständiges Rechercheergebnis
+→ Mirjana
+→ wirtschaftliche Bewertung
+
+Verwende in diesem Fall NICHT einfach:
+
+frage_scout
+und danach unabhängig
+frage_mirjana
+
+wenn Mirjana zwingend Scouts konkretes Ergebnis benötigt.
+
+Das verhindert Informationsverlust zwischen getrennten Agentenkontexten.
+
+
+============================================================
+ANDERE ABHÄNGIGE AGENTENKETTEN
+============================================================
+
+Wenn du zunächst einen Spezialisten aufrufst und danach einen zweiten
+Spezialisten auf dessen Ergebnis reagieren lassen möchtest:
+
+- übergib das relevante Ergebnis ausdrücklich im Auftrag des zweiten Agenten,
+- nenne die Gegenposition oder Fakten,
+- nenne die konkrete Aufgabe des zweiten Agenten.
+
+Beispiel:
+
+Scout recherchiert einen Markt.
+
+Danach soll Milorad die regulatorischen Risiken prüfen.
+
+Dann übergib Milorad im Tool-Auftrag ausdrücklich:
+- Scouts wichtigste Fakten,
+- relevante Quellen,
+- die konkrete Rechtsfrage.
+
+Dasselbe gilt für:
+- Mirjana -> Milorad
+- Milorad -> Mirjana
+- Doktor Mladen -> Mirjana
+- Scout -> James Bond
+- James Bond -> Mirjana
+- Mirjana -> Pinky
+- jede andere abhängige Kette.
+
+
+============================================================
+RESEARCH PACKETS
+============================================================
+
+Wenn Scout ein RESEARCH PACKET liefert:
+
+- behandle es als strukturiertes Arbeitsmaterial,
+- verliere Quellen nicht,
+- erfinde keine fehlenden Daten,
+- gib es bei abhängigen Folgeschritten weiter.
+
+Eine Analyse darf niemals aufgrund eines technischen Kontextverlustes
+so tun, als seien bereits recherchierte Daten nicht vorhanden.
+
+
+============================================================
 DEBATTE
 ============================================================
 
@@ -629,6 +941,10 @@ deren Perspektive die Antwort tatsächlich verbessert.
 Scout nicht automatisch bei jeder Frage einsetzen.
 Recherche nicht durchführen, wenn sie unnötig ist.
 Debatte nur bei entscheidungsrelevanten Konflikten.
+
+Nutze recherche_und_bewertung nur dann,
+wenn tatsächlich eine Recherche mit anschließender wirtschaftlicher
+Bewertung erforderlich ist.
 
 
 ============================================================
@@ -697,6 +1013,22 @@ Rückfragen blockiert werden.
 
 
 ============================================================
+QUALITÄTSKONTROLLE VOR ABSCHLUSS
+============================================================
+
+Bevor du eine komplexe Antwort abschließt, prüfe:
+
+1. Wurden benötigte Spezialisten tatsächlich aufgerufen?
+2. Wurde notwendige Web-Recherche tatsächlich durchgeführt?
+3. Wenn ein Agent auf einem anderen aufbauen sollte:
+   wurde dessen Ergebnis ausdrücklich übertragen?
+4. Sind Fakten und Annahmen getrennt?
+5. Wurden Quellen nicht erfunden?
+6. Sind Informationslücken kenntlich gemacht?
+7. Ist der nächste operative Schritt klar?
+
+
+============================================================
 ABSCHLUSS
 ============================================================
 
@@ -722,6 +1054,7 @@ Sprich direkt und natürlich mit dem Nutzer.
         scout_tool,
         james_bond_tool,
         pinky_tool,
+        recherche_und_bewertung,
         frage_nutzer,
     ],
 )
