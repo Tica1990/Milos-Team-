@@ -2,12 +2,19 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+
   <meta name="theme-color" content="#0b0b0f" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta
+    name="apple-mobile-web-app-status-bar-style"
+    content="black-translucent"
+  />
 
-  <title>Miloš Team</title>
+  <title>Miloš Team 2.0</title>
 
   <style>
     :root {
@@ -18,21 +25,20 @@
       --muted: #a1a1aa;
       --accent: #8b5cf6;
       --line: #2a2a35;
+      --ok: #22c55e;
+      --danger: #ef4444;
     }
 
     * {
       box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
     }
 
     html,
     body {
       margin: 0;
-      width: 100%;
       min-height: 100%;
       background: var(--bg);
       color: var(--text);
-
       font-family:
         -apple-system,
         BlinkMacSystemFont,
@@ -44,34 +50,23 @@
 
     body {
       min-height: 100dvh;
-      overflow-x: hidden;
     }
 
     .app {
-      width: 100%;
-      max-width: 820px;
+      max-width: 900px;
       margin: 0 auto;
-
       min-height: 100dvh;
-
       display: flex;
       flex-direction: column;
     }
 
-    /* HEADER */
-
     header {
       position: sticky;
       top: 0;
-      z-index: 10;
-
+      z-index: 20;
       background: rgba(11, 11, 15, 0.92);
-
       backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-
       border-bottom: 1px solid var(--line);
-
       padding:
         calc(env(safe-area-inset-top) + 12px)
         16px
@@ -85,342 +80,278 @@
     }
 
     .orb {
-      flex: 0 0 auto;
-
-      width: 46px;
-      height: 46px;
-
-      border-radius: 15px;
-
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
       background:
         linear-gradient(
           135deg,
           #7c3aed,
           #2563eb
         );
-
       display: grid;
       place-items: center;
-
       font-weight: 800;
       font-size: 20px;
-
       box-shadow:
-        0 8px 30px
-        rgba(124, 58, 237, 0.25);
+        0 8px 30px rgba(124, 58, 237, 0.25);
+    }
+
+    .title-area {
+      flex: 1;
     }
 
     h1 {
-      font-size: 19px;
-      line-height: 1.15;
+      font-size: 18px;
       margin: 0;
     }
 
     .sub {
+      margin-top: 3px;
       font-size: 12px;
       color: var(--muted);
-      margin-top: 3px;
     }
 
-    /* AGENTEN */
-
-    .agentbar {
-      margin-top: 12px;
-
+    .status {
       display: flex;
-      gap: 8px;
-
-      width: 100%;
-
-      overflow-x: auto;
-      overflow-y: hidden;
-
-      padding: 0 4px 4px 0;
-
-      scrollbar-width: none;
-
-      -webkit-overflow-scrolling: touch;
-
-      scroll-snap-type: x proximity;
-    }
-
-    .agentbar::-webkit-scrollbar {
-      display: none;
-    }
-
-    .chip {
-      flex: 0 0 auto;
-
-      border: 1px solid var(--line);
-
-      background: var(--panel);
-
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
       color: var(--muted);
-
-      padding: 8px 12px;
-
-      border-radius: 999px;
-
-      font-size: 13px;
-      line-height: 1;
-
-      white-space: nowrap;
-
-      scroll-snap-align: start;
     }
 
-    .chip.active {
-      color: white;
-
-      border-color: #7c3aed;
-
-      background: #24133f;
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ok);
     }
 
-    /* CHAT */
-
-    #messages {
+    main {
       flex: 1;
-
       width: 100%;
-
-      padding:
-        16px
-        14px
-        calc(120px + env(safe-area-inset-bottom));
+      padding: 18px 14px 150px;
     }
 
-    .msg {
+    .welcome {
+      margin: 30px auto;
+      max-width: 640px;
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .welcome strong {
+      color: var(--text);
+    }
+
+    .message {
+      margin: 15px 0;
       display: flex;
-
-      width: 100%;
-
-      margin: 10px 0;
+      flex-direction: column;
     }
 
-    .msg.user {
-      justify-content: flex-end;
+    .message.user {
+      align-items: flex-end;
     }
 
-    .msg.assistant {
-      justify-content: flex-start;
+    .message.assistant {
+      align-items: flex-start;
     }
 
-    .msg > div {
-      max-width: 86%;
-      min-width: 0;
+    .name {
+      font-size: 11px;
+      color: var(--muted);
+      margin: 0 7px 5px;
     }
 
     .bubble {
-      width: fit-content;
-      max-width: 100%;
-
-      padding: 12px 14px;
-
+      max-width: 86%;
       border-radius: 18px;
-
+      padding: 12px 14px;
       line-height: 1.5;
-
       white-space: pre-wrap;
+      word-wrap: break-word;
+    }
 
-      overflow-wrap: anywhere;
-      word-break: break-word;
-
-      font-size: 15px;
+    .user .bubble {
+      background: var(--accent);
+      color: white;
+      border-bottom-right-radius: 6px;
     }
 
     .assistant .bubble {
       background: var(--panel);
-
       border: 1px solid var(--line);
-
       border-bottom-left-radius: 6px;
     }
 
-    .user .bubble {
-      margin-left: auto;
-
-      background: #6d28d9;
-
-      border-bottom-right-radius: 6px;
+    .activity {
+      width: min(86%, 680px);
+      margin-bottom: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(139, 92, 246, 0.06);
     }
 
-    /* AGENTENWECHSEL */
-
-    .handoff {
-      margin: 10px auto;
-
-      text-align: center;
-
+    .activity-title {
+      font-size: 11px;
       color: var(--muted);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
 
+    .flow {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .chip {
+      font-size: 12px;
+      padding: 6px 9px;
+      border-radius: 999px;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+    }
+
+    .arrow {
+      color: var(--muted);
       font-size: 12px;
     }
 
-    /* STARTTEXT */
-
-    .hint {
-      padding: 40px 18px;
-
-      text-align: center;
-
-      color: var(--muted);
-
-      line-height: 1.5;
+    .typing {
+      display: inline-flex;
+      gap: 5px;
+      padding: 4px;
     }
 
-    .hint strong {
-      color: white;
+    .typing span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: bounce 1.3s infinite;
     }
 
-    /* EINGABEFELD */
+    .typing span:nth-child(2) {
+      animation-delay: 0.15s;
+    }
 
-    .composer {
+    .typing span:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes bounce {
+      0%,
+      60%,
+      100% {
+        transform: translateY(0);
+        opacity: 0.4;
+      }
+
+      30% {
+        transform: translateY(-4px);
+        opacity: 1;
+      }
+    }
+
+    .composer-wrap {
       position: fixed;
-
       left: 0;
       right: 0;
       bottom: 0;
-
-      z-index: 20;
-
-      pointer-events: none;
-
-      background:
-        linear-gradient(
-          transparent,
-          rgba(11, 11, 15, 0.92) 28%,
-          var(--bg) 60%
-        );
-
+      z-index: 30;
       padding:
-        30px
+        10px
         12px
         calc(env(safe-area-inset-bottom) + 10px);
+      background:
+        linear-gradient(
+          to top,
+          var(--bg) 75%,
+          rgba(11, 11, 15, 0)
+        );
     }
 
-    .composer-inner {
-      pointer-events: auto;
-
-      max-width: 820px;
-
-      margin: auto;
-
+    .composer {
+      max-width: 870px;
+      margin: 0 auto;
       display: flex;
-      gap: 8px;
-
       align-items: flex-end;
-
-      background: var(--panel2);
-
-      border: 1px solid var(--line);
-
-      border-radius: 24px;
-
+      gap: 8px;
       padding: 8px;
-
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
       box-shadow:
-        0 12px 40px
-        rgba(0, 0, 0, 0.28);
+        0 12px 35px rgba(0, 0, 0, 0.28);
     }
 
     textarea {
       flex: 1;
-
-      width: 100%;
-
-      resize: none;
-
-      max-height: 140px;
       min-height: 44px;
-
-      background: transparent;
-
+      max-height: 160px;
+      resize: none;
       border: none;
       outline: none;
-
-      color: white;
-
+      background: transparent;
+      color: var(--text);
       font: inherit;
-      font-size: 16px;
-
+      line-height: 1.4;
       padding: 11px 10px;
-
-      line-height: 1.35;
     }
 
     textarea::placeholder {
-      color: #8d8d97;
+      color: #71717a;
     }
 
     button {
-      flex: 0 0 auto;
-
-      width: 46px;
-      height: 46px;
-
-      border-radius: 16px;
-
+      width: 44px;
+      height: 44px;
+      flex: 0 0 44px;
+      border-radius: 15px;
       border: none;
-
       background: var(--accent);
-
       color: white;
-
-      font-size: 24px;
-      font-weight: 700;
-
-      display: grid;
-      place-items: center;
-
+      font-size: 19px;
       cursor: pointer;
     }
 
     button:disabled {
       opacity: 0.45;
+      cursor: default;
     }
 
-    /* IPHONE / MOBILE */
+    .error {
+      color: #fecaca;
+      border-color: rgba(239, 68, 68, 0.4) !important;
+      background: rgba(239, 68, 68, 0.08) !important;
+    }
 
-    @media (max-width: 600px) {
-
-      header {
-        padding-left: 14px;
-        padding-right: 14px;
-      }
-
-      #messages {
-        padding-left: 12px;
-        padding-right: 12px;
-      }
-
-      .msg > div {
-        max-width: 90%;
+    @media (min-width: 700px) {
+      main {
+        padding-left: 24px;
+        padding-right: 24px;
       }
 
       .bubble {
-        font-size: 15px;
+        max-width: 75%;
       }
 
-      .chip {
-        padding: 8px 11px;
-        font-size: 12.5px;
-      }
-
-      .composer {
-        padding-left: 10px;
-        padding-right: 10px;
+      .activity {
+        width: min(75%, 680px);
       }
     }
   </style>
 </head>
 
-
 <body>
 
 <div class="app">
-
-  <!-- KOPFBEREICH -->
 
   <header>
 
@@ -430,78 +361,16 @@
         M
       </div>
 
-      <div>
-
-        <h1>
-          Miloš Team
-        </h1>
-
-        <div
-          class="sub"
-          id="status"
-        >
-          bereit
+      <div class="title-area">
+        <h1>Miloš Team</h1>
+        <div class="sub">
+          Eigenanalyse · Recherche · Debatte
         </div>
-
       </div>
 
-    </div>
-
-
-    <!-- AGENTENLEISTE -->
-
-    <div
-      class="agentbar"
-      id="agentbar"
-    >
-
-      <div
-        class="chip active"
-        data-agent="Miloš"
-      >
-        🧠 Miloš
-      </div>
-
-      <div
-        class="chip"
-        data-agent="Mirjana"
-      >
-        💰 Mirjana
-      </div>
-
-      <div
-        class="chip"
-        data-agent="Milorad"
-      >
-        ⚖️ Milorad
-      </div>
-
-      <div
-        class="chip"
-        data-agent="Doktor Mladen"
-      >
-        🩺 Doktor Mladen
-      </div>
-
-      <div
-        class="chip"
-        data-agent="Scout"
-      >
-        🔎 Scout
-      </div>
-
-      <div
-        class="chip"
-        data-agent="James Bond"
-      >
-        🌍 James Bond
-      </div>
-
-      <div
-        class="chip"
-        data-agent="Pinky"
-      >
-        ⚡ Pinky
+      <div class="status">
+        <span class="dot"></span>
+        live
       </div>
 
     </div>
@@ -509,54 +378,40 @@
   </header>
 
 
-  <!-- CHAT -->
-
-  <main id="messages">
+  <main id="chat">
 
     <div
-      class="hint"
-      id="hint"
+      class="welcome"
+      id="welcome"
     >
-
-      <strong>
-        Sprich zuerst mit Miloš.
-      </strong>
-
+      <strong>Miloš Team 2.0</strong>
       <br><br>
-
-      Zum Beispiel:
-
-      <br>
-
-      „Ich habe eine Geschäftsidee.
-      Hol die richtigen Leute dazu.“
-
+      Miloš kann Spezialisten unabhängig analysieren,
+      recherchieren und bei relevanten Meinungsunterschieden
+      gegeneinander argumentieren lassen.
     </div>
 
   </main>
 
-</div>
 
+  <div class="composer-wrap">
 
-<!-- NACHRICHTENEINGABE -->
+    <div class="composer">
 
-<div class="composer">
+      <textarea
+        id="input"
+        rows="1"
+        placeholder="Frage Miloš ..."
+      ></textarea>
 
-  <div class="composer-inner">
+      <button
+        id="send"
+        aria-label="Senden"
+      >
+        ↑
+      </button>
 
-    <textarea
-      id="input"
-      rows="1"
-      placeholder="Nachricht an Miloš …"
-    ></textarea>
-
-    <button
-      id="send"
-      type="button"
-      aria-label="Nachricht senden"
-    >
-      ↑
-    </button>
+    </div>
 
   </div>
 
@@ -565,516 +420,383 @@
 
 <script>
 
-  /*
-   * ELEMENTE
-   */
+const chat =
+  document.getElementById("chat");
 
-  const input =
-    document.getElementById('input');
+const input =
+  document.getElementById("input");
 
-  const send =
-    document.getElementById('send');
+const send =
+  document.getElementById("send");
 
-  const messages =
-    document.getElementById('messages');
-
-  const status =
-    document.getElementById('status');
+const welcome =
+  document.getElementById("welcome");
 
 
-  /*
-   * SESSION / MEMORY
-   */
-
-  let sessionId =
-    localStorage.getItem(
-      'milos_session_id'
-    ) || null;
+let sessionId =
+  localStorage.getItem(
+    "milos_session_id"
+  );
 
 
-  /*
-   * AKTUELLER AGENT
-   */
+function scrollBottom() {
 
-  let lastAgent =
-    'Miloš';
+  window.scrollTo({
+    top: document.body.scrollHeight,
+    behavior: "smooth"
+  });
 
-
-  /*
-   * AKTIVEN AGENTEN ANZEIGEN
-   */
-
-  function activeAgent(name) {
-
-    document
-      .querySelectorAll('.chip')
-      .forEach(chip => {
-
-        chip.classList.toggle(
-          'active',
-          chip.dataset.agent === name
-        );
-
-      });
+}
 
 
-    status.textContent =
-      'aktiv: ' + name;
+function hideWelcome() {
+
+  if (welcome) {
+    welcome.style.display = "none";
+  }
+
+}
 
 
-    /*
-     * Aktiven Agenten automatisch
-     * in der Leiste sichtbar machen
-     */
+function addMessage(
+  role,
+  name,
+  text,
+  extraClass = ""
+) {
 
-    const activeChip =
-      Array
-        .from(
-          document.querySelectorAll('.chip')
-        )
-        .find(
-          chip =>
-            chip.dataset.agent === name
-        );
+  hideWelcome();
+
+  const wrap =
+    document.createElement("div");
+
+  wrap.className =
+    `message ${role}`;
 
 
-    if (activeChip) {
+  const label =
+    document.createElement("div");
 
-      activeChip.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-        inline: 'center'
-      });
+  label.className = "name";
+  label.textContent = name;
+
+
+  const bubble =
+    document.createElement("div");
+
+  bubble.className =
+    `bubble ${extraClass}`;
+
+  bubble.textContent = text;
+
+
+  wrap.appendChild(label);
+  wrap.appendChild(bubble);
+
+  chat.appendChild(wrap);
+
+  scrollBottom();
+
+  return wrap;
+
+}
+
+
+function addAgentFlow(flow) {
+
+  if (
+    !Array.isArray(flow) ||
+    flow.length <= 2
+  ) {
+    return;
+  }
+
+
+  const wrap =
+    document.createElement("div");
+
+  wrap.className =
+    "message assistant";
+
+
+  const activity =
+    document.createElement("div");
+
+  activity.className =
+    "activity";
+
+
+  const title =
+    document.createElement("div");
+
+  title.className =
+    "activity-title";
+
+  title.textContent =
+    "Tatsächlicher Teamlauf";
+
+
+  const flowEl =
+    document.createElement("div");
+
+  flowEl.className =
+    "flow";
+
+
+  flow.forEach(
+    (agent, index) => {
+
+      const chip =
+        document.createElement("span");
+
+      chip.className =
+        "chip";
+
+      chip.textContent =
+        agent;
+
+      flowEl.appendChild(chip);
+
+
+      if (index < flow.length - 1) {
+
+        const arrow =
+          document.createElement("span");
+
+        arrow.className =
+          "arrow";
+
+        arrow.textContent =
+          "→";
+
+        flowEl.appendChild(arrow);
+
+      }
 
     }
+  );
 
+
+  activity.appendChild(title);
+  activity.appendChild(flowEl);
+
+  wrap.appendChild(activity);
+
+  chat.appendChild(wrap);
+
+}
+
+
+function addTyping() {
+
+  hideWelcome();
+
+  const wrap =
+    document.createElement("div");
+
+  wrap.className =
+    "message assistant";
+
+
+  const label =
+    document.createElement("div");
+
+  label.className =
+    "name";
+
+  label.textContent =
+    "Miloš Team arbeitet";
+
+
+  const bubble =
+    document.createElement("div");
+
+  bubble.className =
+    "bubble";
+
+
+  const typing =
+    document.createElement("div");
+
+  typing.className =
+    "typing";
+
+  typing.innerHTML =
+    "<span></span><span></span><span></span>";
+
+
+  bubble.appendChild(typing);
+
+  wrap.appendChild(label);
+  wrap.appendChild(bubble);
+
+  chat.appendChild(wrap);
+
+  scrollBottom();
+
+  return wrap;
+
+}
+
+
+async function submit() {
+
+  const text =
+    input.value.trim();
+
+  if (!text) {
+    return;
   }
 
 
-  /*
-   * STARTTEXT ENTFERNEN
-   */
+  input.value = "";
+  input.style.height = "auto";
 
-  function removeHint() {
-
-    const hint =
-      document.getElementById('hint');
-
-
-    if (hint) {
-
-      hint.remove();
-
-    }
-
-  }
-
-
-  /*
-   * NACH UNTEN SCROLLEN
-   */
-
-  function scrollToBottom() {
-
-    requestAnimationFrame(() => {
-
-      window.scrollTo({
-        top:
-          document.documentElement
-            .scrollHeight,
-
-        behavior:
-          'smooth'
-      });
-
-    });
-
-  }
-
-
-  /*
-   * NACHRICHT ANZEIGEN
-   */
-
-  function addMessage(
-    role,
+  addMessage(
+    "user",
+    "Du",
     text
-  ) {
-
-    removeHint();
+  );
 
 
-    const row =
-      document.createElement('div');
+  send.disabled = true;
+
+  const typing =
+    addTyping();
 
 
-    row.className =
-      'msg ' + role;
+  try {
+
+    const response =
+      await fetch(
+        "/api/chat",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body: JSON.stringify({
+            message: text,
+            session_id: sessionId
+          })
+        }
+      );
 
 
-    const wrap =
-      document.createElement('div');
+    const data =
+      await response.json();
 
 
-    const bubble =
-      document.createElement('div');
+    typing.remove();
 
 
-    bubble.className =
-      'bubble';
+    if (!response.ok) {
 
+      const detail =
+        data.detail ||
+        "Unbekannter Serverfehler.";
 
-    bubble.textContent =
-      text;
-
-
-    wrap.appendChild(
-      bubble
-    );
-
-
-    row.appendChild(
-      wrap
-    );
-
-
-    messages.appendChild(
-      row
-    );
-
-
-    scrollToBottom();
-
-  }
-
-
-  /*
-   * AGENTENWECHSEL ANZEIGEN
-   */
-
-  function addHandoff(
-    from,
-    to
-  ) {
-
-    const handoff =
-      document.createElement('div');
-
-
-    handoff.className =
-      'handoff';
-
-
-    handoff.textContent =
-      '↪ ' +
-      from +
-      ' → ' +
-      to;
-
-
-    messages.appendChild(
-      handoff
-    );
-
-
-    scrollToBottom();
-
-  }
-
-
-  /*
-   * NACHRICHT SENDEN
-   */
-
-  async function submit() {
-
-    const text =
-      input.value.trim();
-
-
-    if (
-      !text ||
-      send.disabled
-    ) {
+      addMessage(
+        "assistant",
+        "Fehler",
+        detail,
+        "error"
+      );
 
       return;
 
     }
 
 
-    /*
-     * Eigene Nachricht anzeigen
-     */
-
-    addMessage(
-      'user',
-      text
-    );
-
-
-    /*
-     * Eingabe leeren
-     */
-
-    input.value =
-      '';
-
-
-    input.style.height =
-      'auto';
-
-
-    /*
-     * Button während Anfrage sperren
-     */
-
-    send.disabled =
-      true;
-
-
-    status.textContent =
-      'Miloš denkt …';
-
-
-    try {
-
-      /*
-       * BACKEND AUFRUF
-       */
-
-      const response =
-        await fetch(
-          '/api/chat',
-          {
-            method:
-              'POST',
-
-            headers: {
-              'Content-Type':
-                'application/json'
-            },
-
-            body:
-              JSON.stringify({
-
-                message:
-                  text,
-
-                session_id:
-                  sessionId
-
-              })
-          }
-        );
-
-
-      /*
-       * JSON LESEN
-       */
-
-      let data;
-
-
-      try {
-
-        data =
-          await response.json();
-
-      }
-
-      catch {
-
-        throw new Error(
-          'Ungültige Serverantwort'
-        );
-
-      }
-
-
-      /*
-       * SERVERFEHLER
-       */
-
-      if (!response.ok) {
-
-        throw new Error(
-          data.detail ||
-          'Serverfehler'
-        );
-
-      }
-
-
-      /*
-       * SESSION-ID SPEICHERN
-       */
+    if (data.session_id) {
 
       sessionId =
         data.session_id;
 
-
-      if (sessionId) {
-
-        localStorage.setItem(
-          'milos_session_id',
-          sessionId
-        );
-
-      }
-
-
-      /*
-       * AKTIVEN AGENTEN ERMITTELN
-       */
-
-      const currentAgent =
-        data.agent ||
-        'Miloš';
-
-
-      /*
-       * AGENTENWECHSEL
-       */
-
-      if (
-        currentAgent !==
-        lastAgent
-      ) {
-
-        addHandoff(
-          lastAgent,
-          currentAgent
-        );
-
-      }
-
-
-      lastAgent =
-        currentAgent;
-
-
-      /*
-       * AGENTENLEISTE AKTUALISIEREN
-       */
-
-      activeAgent(
-        currentAgent
-      );
-
-
-      /*
-       * ANTWORT ANZEIGEN
-       *
-       * Wichtig:
-       * Kein zusätzlicher Agentenname
-       * über der Nachricht.
-       */
-
-      addMessage(
-        'assistant',
-        data.message || ''
+      localStorage.setItem(
+        "milos_session_id",
+        sessionId
       );
 
     }
 
-    catch (error) {
 
-      /*
-       * FEHLER ANZEIGEN
-       */
-
-      addMessage(
-        'assistant',
-        'Fehler: ' +
-        error.message
-      );
+    addAgentFlow(
+      data.agent_flow
+    );
 
 
-      status.textContent =
-        'Fehler';
-
-    }
-
-    finally {
-
-      /*
-       * BUTTON WIEDER FREIGEBEN
-       */
-
-      send.disabled =
-        false;
+    addMessage(
+      "assistant",
+      data.agent || "Miloš",
+      data.message || ""
+    );
 
 
-      input.focus();
+  } catch (error) {
+
+    typing.remove();
+
+    addMessage(
+      "assistant",
+      "Verbindungsfehler",
+      String(error),
+      "error"
+    );
+
+  } finally {
+
+    send.disabled = false;
+
+    input.focus();
+
+  }
+
+}
+
+
+send.addEventListener(
+  "click",
+  submit
+);
+
+
+input.addEventListener(
+  "keydown",
+  event => {
+
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
+
+      event.preventDefault();
+      submit();
 
     }
 
   }
+);
 
 
-  /*
-   * SENDEN-BUTTON
-   */
+input.addEventListener(
+  "input",
+  () => {
 
-  send.addEventListener(
-    'click',
-    submit
-  );
+    input.style.height =
+      "auto";
 
+    input.style.height =
+      Math.min(
+        input.scrollHeight,
+        160
+      ) + "px";
 
-  /*
-   * ENTER = SENDEN
-   * SHIFT + ENTER = NEUE ZEILE
-   */
-
-  input.addEventListener(
-    'keydown',
-    event => {
-
-      if (
-        event.key === 'Enter' &&
-        !event.shiftKey
-      ) {
-
-        event.preventDefault();
-
-        submit();
-
-      }
-
-    }
-  );
-
-
-  /*
-   * TEXTFELD AUTOMATISCH VERGRÖSSERN
-   */
-
-  input.addEventListener(
-    'input',
-    () => {
-
-      input.style.height =
-        'auto';
-
-
-      input.style.height =
-        Math.min(
-          input.scrollHeight,
-          140
-        ) + 'px';
-
-    }
-  );
-
-
-  /*
-   * STARTZUSTAND
-   */
-
-  activeAgent(
-    'Miloš'
-  );
+  }
+);
 
 </script>
 
