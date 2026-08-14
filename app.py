@@ -63,13 +63,13 @@ async def chat(req: ChatRequest):
     }
 
     for item in result.new_items:
-        raw_item = getattr(item, "raw_item", None)
-        tool_name = getattr(raw_item, "name", None)
+    tool_name = getattr(item, "tool_name", None)
 
-        if tool_name in tool_to_agent:
-            agent_name = tool_to_agent[tool_name]
-            if agent_name not in consulted_agents:
-                consulted_agents.append(agent_name)
+    if tool_name in tool_to_agent:
+        agent_name = tool_to_agent[tool_name]
+
+        if agent_name not in consulted_agents:
+            consulted_agents.append(agent_name)
 
     return {
         "session_id": session_id,
