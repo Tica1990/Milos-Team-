@@ -53,16 +53,16 @@ async def chat(req: ChatRequest):
     
     consulted_agents = []
 
-    tool_to_agent = {
-        "frage_mirjana": "Mirjana",
-        "frage_milorad": "Milorad",
-        "frage_doktor_mladen": "Doktor Mladen",
-        "frage_scout": "Scout",
-        "frage_james_bond": "James Bond",
-        "frage_pinky": "Pinky",
-    }
+tool_to_agent = {
+    "frage_mirjana": "Mirjana",
+    "frage_milorad": "Milorad",
+    "frage_doktor_mladen": "Doktor Mladen",
+    "frage_scout": "Scout",
+    "frage_james_bond": "James Bond",
+    "frage_pinky": "Pinky",
+}
 
-    for item in result.new_items:
+for item in result.new_items:
     tool_name = getattr(item, "tool_name", None)
 
     if tool_name in tool_to_agent:
@@ -71,9 +71,9 @@ async def chat(req: ChatRequest):
         if agent_name not in consulted_agents:
             consulted_agents.append(agent_name)
 
-    return {
-        "session_id": session_id,
-        "agent": result.last_agent.name,
-        "message": result.final_output,
-        "consulted_agents": consulted_agents,
-    }
+return {
+    "session_id": session_id,
+    "agent": result.last_agent.name,
+    "message": result.final_output,
+    "consulted_agents": consulted_agents,
+}
