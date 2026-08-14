@@ -1,18 +1,22 @@
 
 import os
 import uuid
+import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from agents import Runner
-from agents.items import ToolCallItem
-from agents.memory import SQLiteSession
+from agents import Runner, SQLiteSession
+from agents.items import ToolCallItem, ToolCallOutputItem
 
 from team import milos
 
+
+# ============================================================
+# GRUNDEINSTELLUNGEN
+# ============================================================
 
 APP_DIR = Path(__file__).resolve().parent
 DB_PATH = APP_DIR / "milos_memory.db"
@@ -20,10 +24,18 @@ DB_PATH = APP_DIR / "milos_memory.db"
 app = FastAPI(title="Miloš Team 3.0")
 
 
+# ============================================================
+# REQUEST-MODELL
+# ============================================================
+
 class ChatRequest(BaseModel):
     message: str
     session_id: str | None = None
 
+
+# ============================================================
+# TOOL → AGENT ZUORDNUNG
+# ============================================================
 
 TOOL_TO_AGENT = {
     "frage_mirjana": "Mirjana",
@@ -35,6 +47,10 @@ TOOL_TO_AGENT = {
 }
 
 
+# ============================================================
+# HEALTH
+# ============================================================
+
 @app.get("/health")
 async def health():
     return {
@@ -42,6 +58,10 @@ async def health():
         "app": "Miloš Team 3.0",
     }
 
+
+# ============================================================
+# WEB-OBERFLÄCHE
+# ============================================================
 
 @app.get("/")
 async def root():
@@ -56,31 +76,122 @@ async def root():
     return FileResponse(index_path)
 
 
+# ============================================================
+# TOOL-AUSGABE IN TEXT UMWANDELN
+# ============================================================
+
+def tool_output_to_text(output):
+    if output is None:
+        return ""
+
+    if isinstance(output, str):
+        return output
+
+    try:
+        return json.dumps(
+            output,
+            ensure_ascii=False,
+        )
+    except Exception:
+        return str(output)
+
+
+# ============================================================
+# WAITING_FOR_USER AUS TOOL-AUSGABE LESEN
+# ============================================================
+
+def parse_user_question(text):
+    if not text:
+        return None
+
+    if "WAITING_FOR_USER" not in text:
+        return None
+
+    question = ""
+    reason = ""
+
+    for line in text.splitlines():
+        line = line.strip()
+
+        if line.startswith("FRAGE:"):
+            question = line.removeprefix("FRAGE:").strip()
+
+        elif line.startswith("GRUND:"):
+            reason = line.removeprefix("GRUND:").strip()
+
+    if not question:
+        return None
+
+    return {
+        "question": question,
+        "reason": reason,
+    }
+
+
+# ============================================================
+# AGENTENLAUF ANALYSIEREN
+# ============================================================
+
 def analyse_run(result):
     consulted_agents = []
     agent_flow = ["Miloš"]
     tool_calls = []
 
+    waiting_for_user = None
+
+    # call_id → tool_name
+    tool_calls_by_id = {}
+
     for item in result.new_items:
-        if not isinstance(item, ToolCallItem):
-            continue
 
-        tool_name = item.tool_name
+        # ----------------------------------------------------
+        # TOOL-AUFRUF
+        # ----------------------------------------------------
 
-        if not tool_name:
-            continue
+        if isinstance(item, ToolCallItem):
+            tool_name = item.tool_name
 
-        tool_calls.append(tool_name)
+            if not tool_name:
+                continue
 
-        agent_name = TOOL_TO_AGENT.get(tool_name)
+            tool_calls.append(tool_name)
 
-        if not agent_name:
-            continue
+            call_id = item.call_id
 
-        if agent_name not in consulted_agents:
-            consulted_agents.append(agent_name)
+            if call_id:
+                tool_calls_by_id[call_id] = tool_name
 
-        agent_flow.append(agent_name)
+            # Spezialisten erkennen
+            agent_name = TOOL_TO_AGENT.get(tool_name)
+
+            if agent_name:
+                if agent_name not in consulted_agents:
+                    consulted_agents.append(agent_name)
+
+                agent_flow.append(agent_name)
+
+        # ----------------------------------------------------
+        # TOOL-AUSGABE
+        # ----------------------------------------------------
+
+        elif isinstance(item, ToolCallOutputItem):
+
+            call_id = item.call_id
+
+            if not call_id:
+                continue
+
+            tool_name = tool_calls_by_id.get(call_id)
+
+            if tool_name != "frage_nutzer":
+                continue
+
+            output_text = tool_output_to_text(item.output)
+
+            parsed = parse_user_question(output_text)
+
+            if parsed:
+                waiting_for_user = parsed
 
     agent_flow.append("Miloš")
 
@@ -88,16 +199,30 @@ def analyse_run(result):
         "consulted_agents": consulted_agents,
         "agent_flow": agent_flow,
         "tool_calls": tool_calls,
+        "waiting_for_user": waiting_for_user,
     }
 
 
+# ============================================================
+# CHAT-ENDPOINT
+# ============================================================
+
 @app.post("/api/chat")
 async def chat(req: ChatRequest):
+
+    # --------------------------------------------------------
+    # API KEY PRÜFEN
+    # --------------------------------------------------------
+
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(
             status_code=500,
             detail="OPENAI_API_KEY ist auf dem Server nicht gesetzt.",
         )
+
+    # --------------------------------------------------------
+    # NACHRICHT PRÜFEN
+    # --------------------------------------------------------
 
     message = req.message.strip()
 
@@ -107,12 +232,20 @@ async def chat(req: ChatRequest):
             detail="Leere Nachricht.",
         )
 
+    # --------------------------------------------------------
+    # SESSION
+    # --------------------------------------------------------
+
     session_id = req.session_id or str(uuid.uuid4())
 
     session = SQLiteSession(
         session_id=session_id,
         db_path=str(DB_PATH),
     )
+
+    # --------------------------------------------------------
+    # MILOŠ STARTEN
+    # --------------------------------------------------------
 
     try:
         result = await Runner.run(
@@ -123,20 +256,75 @@ async def chat(req: ChatRequest):
         )
 
     except Exception as exc:
-        print("MILOŠ RUN ERROR:", repr(exc))
+        print(
+            "MILOŠ RUN ERROR:",
+            type(exc).__name__,
+            repr(exc),
+        )
 
         raise HTTPException(
             status_code=500,
-            detail=f"Agentenlauf fehlgeschlagen: {type(exc).__name__}",
+            detail=(
+                "Agentenlauf fehlgeschlagen: "
+                f"{type(exc).__name__}"
+            ),
         ) from exc
+
+    # --------------------------------------------------------
+    # RUN ANALYSIEREN
+    # --------------------------------------------------------
 
     run_info = analyse_run(result)
 
+    waiting = run_info["waiting_for_user"]
+
+    # --------------------------------------------------------
+    # STATUS: WAITING_FOR_USER
+    # --------------------------------------------------------
+
+    if waiting:
+        return {
+            "session_id": session_id,
+
+            "status": "WAITING_FOR_USER",
+
+            "agent": "Miloš",
+
+            "message": waiting["question"],
+
+            "question": waiting["question"],
+
+            "reason": waiting["reason"],
+
+            "consulted_agents":
+                run_info["consulted_agents"],
+
+            "agent_flow":
+                run_info["agent_flow"],
+
+            "tool_calls":
+                run_info["tool_calls"],
+        }
+
+    # --------------------------------------------------------
+    # STATUS: COMPLETED
+    # --------------------------------------------------------
+
     return {
         "session_id": session_id,
+
+        "status": "COMPLETED",
+
         "agent": result.last_agent.name,
+
         "message": str(result.final_output),
-        "consulted_agents": run_info["consulted_agents"],
-        "agent_flow": run_info["agent_flow"],
-        "tool_calls": run_info["tool_calls"],
+
+        "consulted_agents":
+            run_info["consulted_agents"],
+
+        "agent_flow":
+            run_info["agent_flow"],
+
+        "tool_calls":
+            run_info["tool_calls"],
     }
