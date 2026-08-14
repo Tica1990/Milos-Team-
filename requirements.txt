@@ -1,4 +1,4 @@
-openai-agents
 fastapi
 uvicorn[standard]
-aiosqlite
+openai>=2.25.0
+openai-agents
