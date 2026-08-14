@@ -2,36 +2,35 @@
 import os
 import uuid
 import json
+import sqlite3
+import traceback
 from pathlib import Path
+from datetime import datetime, timezone
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from agents import Runner, SQLiteSession
-from agents.items import (
-    ToolCallItem,
-    ToolCallOutputItem,
-    HandoffCallItem,
-    HandoffOutputItem,
-    MessageOutputItem,
-)
+from agents import Runner
+from agents.extensions.memory import AsyncSQLiteSession
 
 from team import milos
 
 
 # ============================================================
-# GRUNDEINSTELLUNGEN
+# PFADE
 # ============================================================
 
 APP_DIR = Path(__file__).resolve().parent
-DB_PATH = APP_DIR / "milos_memory.db"
 
-app = FastAPI(title="Miloš Team 3.0")
+MEMORY_DB_PATH = APP_DIR / "milos_memory.db"
+WORKFLOW_DB_PATH = APP_DIR / "milos_workflows.db"
+
+app = FastAPI(title="Miloš Team")
 
 
 # ============================================================
-# REQUEST-MODELL
+# REQUEST MODELLE
 # ============================================================
 
 class ChatRequest(BaseModel):
@@ -40,540 +39,598 @@ class ChatRequest(BaseModel):
 
 
 # ============================================================
-# TOOL → AGENT ZUORDNUNG
+# HILFSFUNKTIONEN
 # ============================================================
 
-TOOL_TO_AGENT = {
-    "frage_mirjana": "Mirjana",
-    "frage_milorad": "Milorad",
-    "frage_doktor_mladen": "Doktor Mladen",
-    "frage_scout": "Scout",
-    "frage_james_bond": "James Bond",
-    "frage_pinky": "Pinky",
-}
+def utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def get_workflow_db():
+    conn = sqlite3.connect(
+        WORKFLOW_DB_PATH,
+        timeout=30,
+        check_same_thread=False
+    )
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_workflow_db():
+    conn = get_workflow_db()
+
+    try:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS workflows (
+                workflow_id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL,
+                user_message TEXT NOT NULL,
+                status TEXT NOT NULL,
+
+                final_message TEXT,
+                final_agent TEXT,
+
+                consulted_agents TEXT,
+                workflow_events TEXT,
+
+                error TEXT,
+
+                created_at TEXT NOT NULL,
+                started_at TEXT,
+                completed_at TEXT,
+                updated_at TEXT NOT NULL
+            )
+            """
+        )
+
+        conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_workflows_session
+            ON workflows(session_id)
+            """
+        )
+
+        conn.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_workflows_status
+            ON workflows(status)
+            """
+        )
+
+        conn.commit()
+
+    finally:
+        conn.close()
+
+
+init_workflow_db()
+
+
+def update_workflow(
+    workflow_id: str,
+    *,
+    status: str | None = None,
+    final_message: str | None = None,
+    final_agent: str | None = None,
+    consulted_agents: list[str] | None = None,
+    workflow_events: list[dict] | None = None,
+    error: str | None = None,
+    started_at: str | None = None,
+    completed_at: str | None = None,
+):
+    fields = []
+    values = []
+
+    if status is not None:
+        fields.append("status = ?")
+        values.append(status)
+
+    if final_message is not None:
+        fields.append("final_message = ?")
+        values.append(final_message)
+
+    if final_agent is not None:
+        fields.append("final_agent = ?")
+        values.append(final_agent)
+
+    if consulted_agents is not None:
+        fields.append("consulted_agents = ?")
+        values.append(
+            json.dumps(
+                consulted_agents,
+                ensure_ascii=False
+            )
+        )
+
+    if workflow_events is not None:
+        fields.append("workflow_events = ?")
+        values.append(
+            json.dumps(
+                workflow_events,
+                ensure_ascii=False
+            )
+        )
+
+    if error is not None:
+        fields.append("error = ?")
+        values.append(error)
+
+    if started_at is not None:
+        fields.append("started_at = ?")
+        values.append(started_at)
+
+    if completed_at is not None:
+        fields.append("completed_at = ?")
+        values.append(completed_at)
+
+    fields.append("updated_at = ?")
+    values.append(utc_now())
+
+    values.append(workflow_id)
+
+    conn = get_workflow_db()
+
+    try:
+        conn.execute(
+            f"""
+            UPDATE workflows
+            SET {", ".join(fields)}
+            WHERE workflow_id = ?
+            """,
+            values,
+        )
+
+        conn.commit()
+
+    finally:
+        conn.close()
 
 
 # ============================================================
-# HEALTH
+# AGENTEN / WORKFLOW-EVENTS AUS RESULT.NEW_ITEMS LESEN
+# ============================================================
+
+def extract_workflow_information(result):
+    """
+    Best-effort-Auswertung der tatsächlich im Run erzeugten Items.
+
+    Wichtig:
+    Wir erfinden hier keine Agentenaktivitäten.
+    Nur Informationen, die im RunResult wirklich vorhanden sind,
+    werden übernommen.
+    """
+
+    consulted_agents = []
+    events = []
+
+    def add_agent(name):
+        if not name:
+            return
+
+        name = str(name).strip()
+
+        if name and name not in consulted_agents:
+            consulted_agents.append(name)
+
+    # Der Agent, der die finale Antwort geliefert hat
+    try:
+        last_agent = getattr(result, "last_agent", None)
+
+        if last_agent:
+            add_agent(getattr(last_agent, "name", None))
+
+    except Exception:
+        pass
+
+    # Alle während dieses Runs entstandenen Items
+    for item in getattr(result, "new_items", []) or []:
+
+        try:
+            item_type = type(item).__name__
+
+            event = {
+                "type": item_type
+            }
+
+            # ------------------------------------------------
+            # Agent aus dem RunItem
+            # ------------------------------------------------
+
+            agent = getattr(item, "agent", None)
+
+            if agent:
+                agent_name = getattr(agent, "name", None)
+
+                if agent_name:
+                    event["agent"] = agent_name
+                    add_agent(agent_name)
+
+            # ------------------------------------------------
+            # Raw Item
+            # ------------------------------------------------
+
+            raw_item = getattr(item, "raw_item", None)
+
+            if raw_item is not None:
+
+                raw_type = getattr(raw_item, "type", None)
+
+                if raw_type:
+                    event["raw_type"] = str(raw_type)
+
+                # Einige SDK-Items enthalten einen Namen
+                raw_name = getattr(raw_item, "name", None)
+
+                if raw_name:
+                    event["name"] = str(raw_name)
+
+                # Toolname
+                tool_name = getattr(raw_item, "tool_name", None)
+
+                if tool_name:
+                    event["tool_name"] = str(tool_name)
+
+            # ------------------------------------------------
+            # Handoff-Ziel erkennen
+            # ------------------------------------------------
+
+            target_agent = getattr(item, "target_agent", None)
+
+            if target_agent:
+                target_name = getattr(
+                    target_agent,
+                    "name",
+                    None
+                )
+
+                if target_name:
+                    event["target_agent"] = target_name
+                    add_agent(target_name)
+
+            source_agent = getattr(item, "source_agent", None)
+
+            if source_agent:
+                source_name = getattr(
+                    source_agent,
+                    "name",
+                    None
+                )
+
+                if source_name:
+                    event["source_agent"] = source_name
+                    add_agent(source_name)
+
+            events.append(event)
+
+        except Exception as exc:
+
+            events.append(
+                {
+                    "type": "unparsed_item",
+                    "error": str(exc)
+                }
+            )
+
+    return consulted_agents, events
+
+
+# ============================================================
+# EIGENTLICHER MILOŠ-WORKFLOW
+# ============================================================
+
+async def run_milos_workflow(
+    workflow_id: str,
+    session_id: str,
+    message: str
+):
+    print(
+        f"[WORKFLOW {workflow_id}] "
+        f"START session={session_id}"
+    )
+
+    update_workflow(
+        workflow_id,
+        status="RUNNING",
+        started_at=utc_now(),
+    )
+
+    try:
+        # ----------------------------------------------------
+        # Persistente Conversation Memory
+        # ----------------------------------------------------
+
+        session = AsyncSQLiteSession(
+            session_id,
+            db_path=MEMORY_DB_PATH
+        )
+
+        # ----------------------------------------------------
+        # Agentenlauf
+        # ----------------------------------------------------
+
+        result = await Runner.run(
+            milos,
+            message,
+            session=session
+        )
+
+        # ----------------------------------------------------
+        # Ergebnis
+        # ----------------------------------------------------
+
+        final_output = result.final_output
+
+        if final_output is None:
+            final_message = ""
+        elif isinstance(final_output, str):
+            final_message = final_output
+        else:
+            final_message = str(final_output)
+
+        last_agent = getattr(
+            result,
+            "last_agent",
+            None
+        )
+
+        final_agent = (
+            getattr(last_agent, "name", None)
+            if last_agent
+            else None
+        )
+
+        consulted_agents, workflow_events = (
+            extract_workflow_information(result)
+        )
+
+        # Falls Miloš finaler Agent war und nicht bereits enthalten
+        if (
+            final_agent
+            and final_agent not in consulted_agents
+        ):
+            consulted_agents.append(final_agent)
+
+        update_workflow(
+            workflow_id,
+            status="COMPLETED",
+            final_message=final_message,
+            final_agent=final_agent or "Miloš",
+            consulted_agents=consulted_agents,
+            workflow_events=workflow_events,
+            completed_at=utc_now(),
+        )
+
+        print(
+            f"[WORKFLOW {workflow_id}] COMPLETED "
+            f"agents={consulted_agents}"
+        )
+
+    except Exception as exc:
+
+        error_text = (
+            f"{type(exc).__name__}: {exc}"
+        )
+
+        print(
+            f"[WORKFLOW {workflow_id}] FAILED: "
+            f"{error_text}"
+        )
+
+        traceback.print_exc()
+
+        update_workflow(
+            workflow_id,
+            status="FAILED",
+            error=error_text,
+            completed_at=utc_now(),
+        )
+
+
+# ============================================================
+# ROUTEN
 # ============================================================
 
 @app.get("/health")
 async def health():
     return {
         "ok": True,
-        "app": "Miloš Team 3.0",
+        "service": "Miloš Team"
     }
 
-
-# ============================================================
-# WEB-OBERFLÄCHE
-# ============================================================
 
 @app.get("/")
 async def root():
-    index_path = APP_DIR / "index.html"
-
-    if not index_path.exists():
-        raise HTTPException(
-            status_code=500,
-            detail="index.html wurde auf dem Server nicht gefunden.",
-        )
-
-    return FileResponse(index_path)
-
-
-# ============================================================
-# HILFSFUNKTIONEN
-# ============================================================
-
-def tool_output_to_text(output):
-    if output is None:
-        return ""
-
-    if isinstance(output, str):
-        return output
-
-    try:
-        return json.dumps(
-            output,
-            ensure_ascii=False,
-        )
-    except Exception:
-        return str(output)
-
-
-def get_agent_name(agent):
-    if agent is None:
-        return None
-
-    return getattr(agent, "name", None)
-
-
-def add_unique(sequence, value):
-    if not value:
-        return
-
-    if value not in sequence:
-        sequence.append(value)
-
-
-def append_flow(flow, agent_name):
-    if not agent_name:
-        return
-
-    if not flow or flow[-1] != agent_name:
-        flow.append(agent_name)
-
-
-# ============================================================
-# WAITING_FOR_USER AUS TOOL-AUSGABE LESEN
-# ============================================================
-
-def parse_user_question(text):
-    if not text:
-        return None
-
-    if "WAITING_FOR_USER" not in text:
-        return None
-
-    question = ""
-    reason = ""
-
-    for line in text.splitlines():
-        line = line.strip()
-
-        if line.startswith("FRAGE:"):
-            question = line.removeprefix("FRAGE:").strip()
-
-        elif line.startswith("GRUND:"):
-            reason = line.removeprefix("GRUND:").strip()
-
-    if not question:
-        return None
-
-    return {
-        "question": question,
-        "reason": reason,
-    }
-
-
-# ============================================================
-# AGENTENLAUF ANALYSIEREN
-# ============================================================
-
-def analyse_run(result):
-
-    consulted_agents = []
-    agent_flow = []
-    tool_calls = []
-    handoffs = []
-
-    waiting_for_user = None
-
-    # call_id → tool_name
-    tool_calls_by_id = {}
-
-    # --------------------------------------------------------
-    # STANDARDSTART
-    # --------------------------------------------------------
-
-    append_flow(agent_flow, "Miloš")
-
-    # --------------------------------------------------------
-    # ALLE NEUEN RUN-ITEMS ANALYSIEREN
-    # --------------------------------------------------------
-
-    for item in result.new_items:
-
-        # ====================================================
-        # 1. WELCHER AGENT HAT DIESES ITEM ERZEUGT?
-        # ====================================================
-
-        item_agent_name = get_agent_name(
-            getattr(item, "agent", None)
-        )
-
-        if item_agent_name:
-            append_flow(
-                agent_flow,
-                item_agent_name,
-            )
-
-            if item_agent_name != "Miloš":
-                add_unique(
-                    consulted_agents,
-                    item_agent_name,
-                )
-
-        # ====================================================
-        # 2. ECHTER HANDOFF
-        # ====================================================
-
-        if isinstance(item, HandoffOutputItem):
-
-            source_name = get_agent_name(
-                item.source_agent
-            )
-
-            target_name = get_agent_name(
-                item.target_agent
-            )
-
-            handoffs.append({
-                "from": source_name,
-                "to": target_name,
-            })
-
-            append_flow(
-                agent_flow,
-                source_name,
-            )
-
-            append_flow(
-                agent_flow,
-                target_name,
-            )
-
-            if (
-                target_name
-                and target_name != "Miloš"
-            ):
-                add_unique(
-                    consulted_agents,
-                    target_name,
-                )
-
-            continue
-
-        # ====================================================
-        # 3. HANDOFF-CALL
-        # ====================================================
-
-        if isinstance(item, HandoffCallItem):
-
-            raw = item.raw_item
-
-            handoff_name = getattr(
-                raw,
-                "name",
-                None,
-            )
-
-            if handoff_name:
-                tool_calls.append(
-                    f"HANDOFF:{handoff_name}"
-                )
-
-            continue
-
-        # ====================================================
-        # 4. TOOL-AUFRUF
-        # ====================================================
-
-        if isinstance(item, ToolCallItem):
-
-            tool_name = item.tool_name
-
-            if not tool_name:
-                continue
-
-            tool_calls.append(tool_name)
-
-            call_id = item.call_id
-
-            if call_id:
-                tool_calls_by_id[
-                    call_id
-                ] = tool_name
-
-            # -----------------------------------------------
-            # Spezialist über Miloš-Tool erkannt
-            # -----------------------------------------------
-
-            specialist_name = TOOL_TO_AGENT.get(
-                tool_name
-            )
-
-            if specialist_name:
-
-                add_unique(
-                    consulted_agents,
-                    specialist_name,
-                )
-
-                append_flow(
-                    agent_flow,
-                    specialist_name,
-                )
-
-            continue
-
-        # ====================================================
-        # 5. TOOL-AUSGABE
-        # ====================================================
-
-        if isinstance(item, ToolCallOutputItem):
-
-            call_id = item.call_id
-
-            if not call_id:
-                continue
-
-            tool_name = tool_calls_by_id.get(
-                call_id
-            )
-
-            # -----------------------------------------------
-            # Rückfrage an Nutzer erkennen
-            # -----------------------------------------------
-
-            if tool_name == "frage_nutzer":
-
-                output_text = tool_output_to_text(
-                    item.output
-                )
-
-                parsed = parse_user_question(
-                    output_text
-                )
-
-                if parsed:
-                    waiting_for_user = parsed
-
-            continue
-
-        # ====================================================
-        # 6. MESSAGE OUTPUT
-        # ====================================================
-
-        if isinstance(item, MessageOutputItem):
-
-            message_agent = get_agent_name(
-                item.agent
-            )
-
-            if message_agent:
-                append_flow(
-                    agent_flow,
-                    message_agent,
-                )
-
-                if message_agent != "Miloš":
-                    add_unique(
-                        consulted_agents,
-                        message_agent,
-                    )
-
-    # --------------------------------------------------------
-    # LETZTEN AGENTEN DES RUNS BERÜCKSICHTIGEN
-    # --------------------------------------------------------
-
-    last_agent_name = get_agent_name(
-        result.last_agent
+    return FileResponse(
+        APP_DIR / "index.html"
     )
 
-    if last_agent_name:
-        append_flow(
-            agent_flow,
-            last_agent_name,
-        )
-
-        if last_agent_name != "Miloš":
-            add_unique(
-                consulted_agents,
-                last_agent_name,
-            )
-
-    # --------------------------------------------------------
-    # Miloš am Ende ergänzen, wenn er tatsächlich final ist
-    # --------------------------------------------------------
-
-    if last_agent_name == "Miloš":
-        append_flow(
-            agent_flow,
-            "Miloš",
-        )
-
-    return {
-        "consulted_agents": consulted_agents,
-        "agent_flow": agent_flow,
-        "tool_calls": tool_calls,
-        "handoffs": handoffs,
-        "waiting_for_user": waiting_for_user,
-    }
-
 
 # ============================================================
-# CHAT-ENDPOINT
+# NEU:
+# Request startet nur den Workflow und wartet NICHT auf Miloš
 # ============================================================
 
 @app.post("/api/chat")
-async def chat(req: ChatRequest):
-
-    # --------------------------------------------------------
-    # API KEY PRÜFEN
-    # --------------------------------------------------------
-
+async def chat(
+    req: ChatRequest,
+    background_tasks: BackgroundTasks
+):
     if not os.getenv("OPENAI_API_KEY"):
         raise HTTPException(
             status_code=500,
-            detail="OPENAI_API_KEY ist auf dem Server nicht gesetzt.",
+            detail=(
+                "OPENAI_API_KEY ist auf dem Server "
+                "noch nicht gesetzt."
+            )
         )
-
-    # --------------------------------------------------------
-    # NACHRICHT PRÜFEN
-    # --------------------------------------------------------
 
     message = req.message.strip()
 
     if not message:
         raise HTTPException(
             status_code=400,
-            detail="Leere Nachricht.",
+            detail="Leere Nachricht."
         )
 
-    # --------------------------------------------------------
-    # SESSION
-    # --------------------------------------------------------
-
-    session_id = req.session_id or str(
-        uuid.uuid4()
-    )
-
-    session = SQLiteSession(
-        session_id=session_id,
-        db_path=str(DB_PATH),
+    session_id = (
+        req.session_id
+        or str(uuid.uuid4())
     )
 
     # --------------------------------------------------------
-    # MILOŠ STARTEN
+    # Schutz gegen Doppelabsenden
     # --------------------------------------------------------
+
+    conn = get_workflow_db()
 
     try:
+        running = conn.execute(
+            """
+            SELECT workflow_id, status
+            FROM workflows
+            WHERE session_id = ?
+              AND status IN ('QUEUED', 'RUNNING')
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (session_id,),
+        ).fetchone()
 
-        result = await Runner.run(
-            milos,
-            message,
-            session=session,
-            max_turns=30,
-        )
+    finally:
+        conn.close()
 
-    except Exception as exc:
-
-        print(
-            "MILOŠ RUN ERROR:",
-            type(exc).__name__,
-            repr(exc),
-        )
-
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                "Agentenlauf fehlgeschlagen: "
-                f"{type(exc).__name__}"
-            ),
-        ) from exc
-
-    # --------------------------------------------------------
-    # RUN ANALYSIEREN
-    # --------------------------------------------------------
-
-    run_info = analyse_run(result)
-
-    waiting = run_info[
-        "waiting_for_user"
-    ]
-
-    # --------------------------------------------------------
-    # DEBUG-AUSGABE IM SERVER-LOG
-    # --------------------------------------------------------
-
-    print(
-        "AGENT FLOW:",
-        run_info["agent_flow"],
-    )
-
-    print(
-        "CONSULTED AGENTS:",
-        run_info["consulted_agents"],
-    )
-
-    print(
-        "TOOL CALLS:",
-        run_info["tool_calls"],
-    )
-
-    print(
-        "HANDOFFS:",
-        run_info["handoffs"],
-    )
-
-    # --------------------------------------------------------
-    # STATUS: WAITING_FOR_USER
-    # --------------------------------------------------------
-
-    if waiting:
-
+    if running:
         return {
             "session_id": session_id,
-
-            "status": "WAITING_FOR_USER",
-
-            "agent": (
-                get_agent_name(
-                    result.last_agent
-                )
-                or "Miloš"
-            ),
-
-            "message": waiting["question"],
-
-            "question": waiting["question"],
-
-            "reason": waiting["reason"],
-
-            "consulted_agents":
-                run_info["consulted_agents"],
-
-            "agent_flow":
-                run_info["agent_flow"],
-
-            "tool_calls":
-                run_info["tool_calls"],
-
-            "handoffs":
-                run_info["handoffs"],
+            "workflow_id": running["workflow_id"],
+            "status": running["status"],
+            "already_running": True
         }
 
     # --------------------------------------------------------
-    # STATUS: COMPLETED
+    # Neuer Workflow
+    # --------------------------------------------------------
+
+    workflow_id = str(uuid.uuid4())
+    now = utc_now()
+
+    conn = get_workflow_db()
+
+    try:
+        conn.execute(
+            """
+            INSERT INTO workflows (
+                workflow_id,
+                session_id,
+                user_message,
+                status,
+                created_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                workflow_id,
+                session_id,
+                message,
+                "QUEUED",
+                now,
+                now,
+            ),
+        )
+
+        conn.commit()
+
+    finally:
+        conn.close()
+
+    # --------------------------------------------------------
+    # Workflow nach HTTP-Antwort weiterlaufen lassen
+    # --------------------------------------------------------
+
+    background_tasks.add_task(
+        run_milos_workflow,
+        workflow_id,
+        session_id,
+        message
+    )
+
+    # --------------------------------------------------------
+    # Sofortige Antwort an iPhone
     # --------------------------------------------------------
 
     return {
         "session_id": session_id,
+        "workflow_id": workflow_id,
+        "status": "QUEUED",
+        "already_running": False
+    }
 
-        "status": "COMPLETED",
 
-        "agent": (
-            get_agent_name(
-                result.last_agent
+# ============================================================
+# STATUS-POLLING
+# ============================================================
+
+@app.get("/api/workflow/{workflow_id}")
+async def workflow_status(workflow_id: str):
+
+    conn = get_workflow_db()
+
+    try:
+        row = conn.execute(
+            """
+            SELECT *
+            FROM workflows
+            WHERE workflow_id = ?
+            """,
+            (workflow_id,),
+        ).fetchone()
+
+    finally:
+        conn.close()
+
+    if not row:
+        raise HTTPException(
+            status_code=404,
+            detail="Workflow nicht gefunden."
+        )
+
+    consulted_agents = []
+
+    if row["consulted_agents"]:
+        try:
+            consulted_agents = json.loads(
+                row["consulted_agents"]
             )
-            or "Miloš"
-        ),
+        except Exception:
+            consulted_agents = []
 
-        "message": str(
-            result.final_output
-        ),
+    workflow_events = []
 
-        "consulted_agents":
-            run_info["consulted_agents"],
+    if row["workflow_events"]:
+        try:
+            workflow_events = json.loads(
+                row["workflow_events"]
+            )
+        except Exception:
+            workflow_events = []
 
-        "agent_flow":
-            run_info["agent_flow"],
+    return {
+        "workflow_id": row["workflow_id"],
+        "session_id": row["session_id"],
+        "status": row["status"],
 
-        "tool_calls":
-            run_info["tool_calls"],
+        "agent": row["final_agent"],
+        "message": row["final_message"],
 
-        "handoffs":
-            run_info["handoffs"],
+        "consulted_agents": consulted_agents,
+        "workflow_events": workflow_events,
+
+        "error": row["error"],
+
+        "created_at": row["created_at"],
+        "started_at": row["started_at"],
+        "completed_at": row["completed_at"],
+        "updated_at": row["updated_at"],
     }
