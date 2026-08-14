@@ -71,7 +71,7 @@ for item in result.new_items:
         if agent_name not in consulted_agents:
             consulted_agents.append(agent_name)
 
-return {
+    return {
     "session_id": session_id,
     "agent": result.last_agent.name,
     "message": result.final_output,
